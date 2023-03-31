@@ -1,51 +1,81 @@
 pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
---initialize (called at start)
+-- main loop
+
 function _init()
 	cls(0)
+	mode="start"
+	blink_t=1
+end
 
-	ship_spr=2
-	flame_spr=5
-	laser_spr=21
+function _update()
+	blink_t+=1
+	if mode=="game" then update_game()
+	elseif mode=="start" then update_start()
+	elseif mode=="over" then update_over()
+	end
+end
 
-	ship_x=60
-	ship_y=60
+function _draw()
+	if mode=="game" then draw_game()
+	elseif mode=="start" then draw_start()
+	elseif mode=="over" then draw_over()
+	end
+end
 
-	-- laser_x=-8
-	-- laser_y=-8
-
-	fired_lasers={}
-
-	muzzle=0
-
-	ship_spd_x=0
-	ship_spd_y=0
-	
-	score=10000
-	
-	lives=2
-
+function start_game()
+	mode="game"
+	-- init starfield
 	stars_x={}
 	stars_y={}
 	stars_spd={}
-
 	for i=1,80 do
 		add(stars_x, flr(rnd(128)))
 		add(stars_y, flr(rnd(128)))
 		add(stars_spd,rnd(1.5)+.5)
 	end
+	-- init ship
+	ship_spr=2
+	ship_x=60
+	ship_y=60
+	ship_spd_x=0
+	ship_spd_y=0
+	--init flame
+	flame_spr=5
+	-- init lasers
+	laser_spr=21
+	fired_lasers={}
+	muzzle=0
+	-- init player stats
+	score=10000
+	lives=2
+end
+-->8
+-- utils
+
+function blink()
+	local frames = {5,5,5,5,5,5,5,5,5,6,6,7,7,6,6}
+	if blink_t>#frames then blink_t=1 end
+	return frames[blink_t]
 end
 
---update game data (=30fps)
-function _update()
+-->8
+-- update functions
+
+function update_game()
 	--reset speed and sprite
 	ship_spd_x=0
 	ship_spd_y=0
 	ship_spr=2
 
-	--animate stars
-	animate_starfield()
+	--animate starfield
+	for i=1,#stars_y do
+		local y=stars_y[i]
+		stars_y[i]+=stars_spd[i]
+		if stars_y[i]>=128 then stars_y[i]=0
+		end
+	end
 
 	--set x speed
 	if btn(0) and btn(1) then
@@ -80,30 +110,34 @@ function _update()
 	ship_y+=ship_spd_y
 
 	--animate flame
-	--intentionally not render when > 9
 	if flame_spr>9 then flame_spr=5
 	else flame_spr+=1
 	end
 
 	--fire laser
 	if btnp(5) then
-		-- laser_x=ship_x
-		-- laser_y=ship_y-4
 		sfx(0)
 		muzzle=5
-
 		add(fired_lasers,{ship_x,ship_y-4})
 	end
 
 	--cut lasers
-	if #fired_lasers > 10 then deli(fired_lasers,1) end
+	if #fired_lasers > 10 then deli(fired_lasers,1)
+	end
 
-
-	--animate laser
-	animate_lasers()
+	--animate lasers
+	for i=1,#fired_lasers do
+		fired_lasers[i][2]-=3
+	end
+	if laser_spr==24 then laser_spr=21
+	else laser_spr+=1
+	end
 
 	--animate muzzle
 	if muzzle>0 then muzzle-=1
+	end
+
+	if btnp(4) then mode="over"
 	end
 	
 	--reset position if hit bound
@@ -116,47 +150,22 @@ function _update()
 	end
 end
 
--- draw new frame (~30fps)
-function _draw()
-	cls(0)
-	print(#fired_lasers)
-	starfield()
-	lasers()
-	spr(ship_spr,ship_x,ship_y)
-	-- blank frame when > 9 looks cool
-	if flame_spr <=9 then spr(flame_spr,ship_x,ship_y+8)
+function update_start()
+	if btnp(5) or btnp(4) then start_game()
 	end
+end
 
-	
-	if muzzle>0 then
-		circfill(ship_x+3,ship_y-2,muzzle,muzzle>2 and 12 or 7)
-		circfill(ship_x+4,ship_y-2,muzzle,muzzle>2 and 12 or 7)
+function update_over()
+	if btnp(5) or btnp(4) then mode="start"
 	end
-
-	for i=1,4 do
-		spr(lives>=i and 12 or 13, 2 + (i-1) * 9, 2)
-	end
-
-	print("score:"..score,40,3,12)
 end
 -->8
+-- draw functions
 
-function lasers()
-	for i=1,#fired_lasers do
-		spr(laser_spr,fired_lasers[i][1],fired_lasers[i][2])
-	end
-end
-
-function animate_lasers()
-	for i=1,#fired_lasers do
-		fired_lasers[i][2]-=3
-	end
-	if laser_spr==24 then laser_spr=21
-	else laser_spr+=1
-	end
-end
-
-function starfield()
+function draw_game()
+	cls(0)
+	
+	-- draw starfield
 	for i=1,#stars_x do
 		local x,y,s,col=stars_x[i],stars_y[i],stars_spd[i],6
 		if s<1 then col=1
@@ -167,14 +176,38 @@ function starfield()
 		else pset(x,y,col)
 		end
 	end
+
+	-- draw ship and flame
+	spr(ship_spr,ship_x,ship_y)
+	if flame_spr <=9 then spr(flame_spr,ship_x,ship_y+8)
+	end
+
+	-- draw lasers and muzzle flash
+	for i=1,#fired_lasers do
+		spr(laser_spr,fired_lasers[i][1],fired_lasers[i][2])
+	end
+	if muzzle>0 then
+		circfill(ship_x+3,ship_y-2,muzzle,muzzle>2 and 12 or 7)
+		circfill(ship_x+4,ship_y-2,muzzle,muzzle>2 and 12 or 7)
+	end
+
+	-- draw player stats
+	print("score:"..score,40,3,12)
+	for i=1,4 do
+		spr(lives>=i and 12 or 13, 2 + (i-1) * 9, 2)
+	end
 end
 
-function animate_starfield()
-	for i=1,#stars_y do
-		local y=stars_y[i]
-		stars_y[i]+=stars_spd[i]
-		if stars_y[i]>=128 then stars_y[i]=0 end
-	end
+function draw_start()
+	cls(1)
+	print("my awesome shmup",32,40,12)
+	print("press any key to start",20,80,blink())
+end
+
+function draw_over()
+	cls(8)
+	print("game over",46,40,2)
+	print("press any key to continue",15,80,blink())
 end
 __gfx__
 00000000000880000008800000088000000000000000000000000000000000000000000000000000000000000000000008800880088008800000000000000000
