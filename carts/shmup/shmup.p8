@@ -14,14 +14,25 @@ function _init()
 
 	laser_x=-8
 	laser_y=-8
-	
+
 	muzzle=0
 
 	ship_spd_x=0
 	ship_spd_y=0
 	
-	score=30000
+	score=10000
+	
 	lives=2
+
+	stars_x={}
+	stars_y={}
+	stars_spd={}
+
+	for i=1,80 do
+		add(stars_x, flr(rnd(128)))
+		add(stars_y, flr(rnd(128)))
+		add(stars_spd,rnd(1.5)+.5)
+	end
 end
 
 --update game data (=30fps)
@@ -30,6 +41,9 @@ function _update()
 	ship_spd_x=0
 	ship_spd_y=0
 	ship_spr=2
+
+	--animate stars
+	animate_starfield()
 
 	--set x speed
 	if btn(0) and btn(1) then
@@ -99,14 +113,14 @@ end
 
 -- draw new frame (~30fps)
 function _draw()
-	cls(1)
-
+	cls(0)
+	starfield()
+	lasers()
 	spr(ship_spr,ship_x,ship_y)
 	-- blank frame when > 9 looks cool
 	if flame_spr <=9 then spr(flame_spr,ship_x,ship_y+8)
 	end
 
-	spr(laser_spr,laser_x,laser_y)
 	
 	if muzzle>0 then
 		circfill(ship_x+3,ship_y-2,muzzle,muzzle>2 and 12 or 7)
@@ -114,11 +128,36 @@ function _draw()
 	end
 
 	for i=1,4 do
-		spr(lives >= i and 12 or 13, 2 + (i-1) * 9, 2)
+		spr(lives>=i and 12 or 13, 2 + (i-1) * 9, 2)
 	end
 
 	print("score:"..score,40,3,12)
+end
+-->8
 
+function lasers()
+	spr(laser_spr,laser_x,laser_y)
+end
+
+function starfield()
+	for i=1,#stars_x do
+		local x,y,s,col=stars_x[i],stars_y[i],stars_spd[i],6
+		if s<1 then col=1
+		elseif s<1.5 then col=13
+		end
+
+		if s>1.9 then line(x,y,x,y+4,col)
+		else pset(x,y,col)
+		end
+	end
+end
+
+function animate_starfield()
+	for i=1,#stars_y do
+		local y=stars_y[i]
+		stars_y[i]+=stars_spd[i]
+		if stars_y[i]>=128 then stars_y[i]=0 end
+	end
 end
 __gfx__
 00000000000880000008800000088000000000000000000000000000000000000000000000000000000000000000000008800880088008800000000000000000
