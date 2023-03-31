@@ -12,8 +12,10 @@ function _init()
 	ship_x=60
 	ship_y=60
 
-	laser_x=-8
-	laser_y=-8
+	-- laser_x=-8
+	-- laser_y=-8
+
+	fired_lasers={}
 
 	muzzle=0
 
@@ -85,17 +87,20 @@ function _update()
 
 	--fire laser
 	if btnp(5) then
-		laser_x=ship_x
-		laser_y=ship_y-4
+		-- laser_x=ship_x
+		-- laser_y=ship_y-4
 		sfx(0)
 		muzzle=5
+
+		add(fired_lasers,{ship_x,ship_y-4})
 	end
-	laser_y-=3
+
+	--cut lasers
+	if #fired_lasers > 10 then deli(fired_lasers,1) end
+
 
 	--animate laser
-	if laser_spr==24 then laser_spr=21
-	else laser_spr+=1
-	end
+	animate_lasers()
 
 	--animate muzzle
 	if muzzle>0 then muzzle-=1
@@ -114,6 +119,7 @@ end
 -- draw new frame (~30fps)
 function _draw()
 	cls(0)
+	print(#fired_lasers)
 	starfield()
 	lasers()
 	spr(ship_spr,ship_x,ship_y)
@@ -136,7 +142,18 @@ end
 -->8
 
 function lasers()
-	spr(laser_spr,laser_x,laser_y)
+	for i=1,#fired_lasers do
+		spr(laser_spr,fired_lasers[i][1],fired_lasers[i][2])
+	end
+end
+
+function animate_lasers()
+	for i=1,#fired_lasers do
+		fired_lasers[i][2]-=3
+	end
+	if laser_spr==24 then laser_spr=21
+	else laser_spr+=1
+	end
 end
 
 function starfield()
