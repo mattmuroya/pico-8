@@ -22,30 +22,35 @@ function _draw()
 	elseif mode=="start" then draw_start()
 	elseif mode=="over" then draw_over()
 	end
+	-- debug
+	-- print("debug",1,122,7)
 end
 
 function start_game()
 	mode="game"
-	-- init starfield
-	stars_x={}
-	stars_y={}
-	stars_spd={}
+	-- init stars
+	stars={}
 	for i=1,80 do
-		add(stars_x, flr(rnd(128)))
-		add(stars_y, flr(rnd(128)))
-		add(stars_spd,rnd(1.5)+.5)
+		add(stars,{
+			x=flr(rnd(128)),
+			y=flr(rnd(128)),
+			spd=rnd(1.5)+0.5
+		})
 	end
 	-- init ship
-	ship_spr=2
-	ship_x=60
-	ship_y=60
-	ship_spd_x=0
-	ship_spd_y=0
+	ship={
+		spr=2,
+		x=60,
+		y=60,
+		spd={
+			x=0,
+			y=0
+		}
+	}
 	--init flame
-	flame_spr=5
+	flame=5
 	-- init lasers
-	laser_spr=21
-	fired_lasers={}
+	lasers={}
 	muzzle=0
 	-- init player stats
 	score=10000
@@ -59,94 +64,81 @@ function blink()
 	if blink_t>#frames then blink_t=1 end
 	return frames[blink_t]
 end
-
 -->8
 -- update functions
 
 function update_game()
 	--reset speed and sprite
-	ship_spd_x=0
-	ship_spd_y=0
-	ship_spr=2
-
+	ship.spd.x=0
+	ship.spd.y=0
+	ship.spr=2
 	--animate starfield
-	for i=1,#stars_y do
-		local y=stars_y[i]
-		stars_y[i]+=stars_spd[i]
-		if stars_y[i]>=128 then stars_y[i]=0
+	for i=1,#stars do
+		local star=stars[i]
+		star.y+=star.spd
+		if star.y>=128 then star.y=0
 		end
 	end
-
 	--set x speed
 	if btn(0) and btn(1) then
-		if btn_0_was_last then ship_spd_x+=2
-		else ship_spd_x-=2
+		if btn_0_was_last then ship.spd.x+=2
+		else ship.spd.x-=2
 		end
 	elseif btn(0) then 
 		btn_0_was_last=true
-		ship_spd_x-=2
-		ship_spr=1
+		ship.spd.x-=2
+		ship.spr=1
 	elseif btn(1) then
 		btn_0_was_last=false
-		ship_spd_x+=2
-		ship_spr=3
+		ship.spd.x+=2
+		ship.spr=3
 	end
-
 	--set y speed
 	if btn(2) and btn(3) then
-		if btn_2_was_last then ship_spd_y+=2
-		else ship_spd_y-=2
+		if btn_2_was_last then ship.spd.y+=2
+		else ship.spd.y-=2
 		end
 	elseif btn(2) then 
 		btn_2_was_last=true
-		ship_spd_y-=2
+		ship.spd.y-=2
 	elseif btn(3) then
 		btn_2_was_last=false
-		ship_spd_y+=2
+		ship.spd.y+=2
 	end
-
 	--calculate ship position
-	ship_x+=ship_spd_x
-	ship_y+=ship_spd_y
-
+	ship.x+=ship.spd.x
+	ship.y+=ship.spd.y
 	--animate flame
-	if flame_spr>9 then flame_spr=5
-	else flame_spr+=1
+	if flame>9 then flame=5
+	else flame+=1
 	end
-
 	--fire laser
 	if btnp(5) then
-		sfx(0)
+		add(lasers,{
+			x=ship.x,
+			y=ship.y-4,
+			spr=21
+		})
 		muzzle=5
-		add(fired_lasers,{ship_x,ship_y-4})
+		sfx(0)
 	end
-
-	--cut lasers
-	if #fired_lasers > 10 then deli(fired_lasers,1)
-	end
-
 	--animate lasers
-	for i=1,#fired_lasers do
-		fired_lasers[i][2]-=3
+	for i=#lasers,1,-1 do
+		lasers[i].y-=3
+		if lasers[i].y<-8 then del(lasers,lasers[i])
+		elseif lasers[i].spr<24 then lasers[i].spr+=1
+		else lasers[i].spr=21
+		end
 	end
-	if laser_spr==24 then laser_spr=21
-	else laser_spr+=1
-	end
-
 	--animate muzzle
 	if muzzle>0 then muzzle-=1
 	end
-
-	if btnp(4) then mode="over"
-	end
-	
 	--reset position if hit bound
-	if ship_x>=120 then	ship_x=120
-	elseif ship_x<=0 then	ship_x=0
+	if ship.x>=120 then	ship.x=120
+	elseif ship.x<=0 then	ship.x=0
 	end
-
-	if ship_y>=120 then	ship_y=120
-	elseif ship_y<=0 then	ship_y=0
+	if ship.y>=120 then	ship.y=120
+	elseif ship.y<=0 then	ship.y=0
 	end
 end
 
@@ -164,33 +156,28 @@ end
 
 function draw_game()
 	cls(0)
-	
 	-- draw starfield
-	for i=1,#stars_x do
-		local x,y,s,col=stars_x[i],stars_y[i],stars_spd[i],6
-		if s<1 then col=1
-		elseif s<1.5 then col=13
+	for i=1,#stars do
+		local star,color = stars[i],6
+		if star.spd<1 then color=1
+		elseif star.spd<1.5 then color=13
 		end
-
-		if s>1.9 then line(x,y,x,y+4,col)
-		else pset(x,y,col)
+		if star.spd>1.9 then line(star.x,star.y,star.x,star.y+4,color)
+		else pset(star.x,star.y,color)
 		end
 	end
-
 	-- draw ship and flame
-	spr(ship_spr,ship_x,ship_y)
-	if flame_spr <=9 then spr(flame_spr,ship_x,ship_y+8)
+	spr(ship.spr,ship.x,ship.y)
+	if flame <=9 then spr(flame,ship.x,ship.y+8)
 	end
-
-	-- draw lasers and muzzle flash
-	for i=1,#fired_lasers do
-		spr(laser_spr,fired_lasers[i][1],fired_lasers[i][2])
+	for i=1,#lasers do
+		local laser=lasers[i]
+		spr(laser.spr,laser.x,laser.y)
 	end
 	if muzzle>0 then
-		circfill(ship_x+3,ship_y-2,muzzle,muzzle>2 and 12 or 7)
-		circfill(ship_x+4,ship_y-2,muzzle,muzzle>2 and 12 or 7)
+		circfill(ship.x+3,ship.y-2,muzzle,muzzle>2 and 12 or 7)
+		circfill(ship.x+4,ship.y-2,muzzle,muzzle>2 and 12 or 7)
 	end
-
 	-- draw player stats
 	print("score:"..score,40,3,12)
 	for i=1,4 do
