@@ -1,9 +1,2 @@
 .DS_Store
-backup/*
-bbs/*
-cdata/*
-cstore/*
-activity_log.txt
-favourites.txt
-log.txt
 **.p8l
