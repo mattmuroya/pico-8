@@ -30,7 +30,7 @@ function start_game()
 	mode="game"
 	-- init stars
 	stars={}
-	for i=1,80 do
+	for i=1,70 do
 		add(stars,{
 			x=flr(rnd(128)),
 			y=flr(rnd(128)),
@@ -42,10 +42,8 @@ function start_game()
 		spr=2,
 		x=60,
 		y=60,
-		spd={
-			x=0,
-			y=0
-		}
+		sx=0,
+		xy=0
 	}
 	--init flame
 	flame=5
@@ -71,13 +69,17 @@ function blink()
 	if blink_t>#frames then blink_t=1 end
 	return frames[blink_t]
 end
+
+function draw_sprite(sprite)
+	spr(sprite.spr,sprite.x,sprite.y)
+end
 -->8
 -- update functions
 
 function update_game()
 	--reset speed and sprite
-	ship.spd.x=0
-	ship.spd.y=0
+	ship.sx=0
+	ship.sy=0
 	ship.spr=2
 	--animate starfield
 	for star in all(stars) do
@@ -87,33 +89,33 @@ function update_game()
 	end
 	--set x speed
 	if btn(0) and btn(1) then
-		if btn_0_was_last then ship.spd.x+=2
-		else ship.spd.x-=2
+		if btn_0_was_last then ship.sx+=2
+		else ship.sx-=2
 		end
 	elseif btn(0) then 
 		btn_0_was_last=true
-		ship.spd.x-=2
+		ship.sx-=2
 		ship.spr=1
 	elseif btn(1) then
 		btn_0_was_last=false
-		ship.spd.x+=2
+		ship.sx+=2
 		ship.spr=3
 	end
 	--set y speed
 	if btn(2) and btn(3) then
-		if btn_2_was_last then ship.spd.y+=2
-		else ship.spd.y-=2
+		if btn_2_was_last then ship.sy+=2
+		else ship.sy-=2
 		end
 	elseif btn(2) then 
 		btn_2_was_last=true
-		ship.spd.y-=2
+		ship.sy-=2
 	elseif btn(3) then
 		btn_2_was_last=false
-		ship.spd.y+=2
+		ship.sy+=2
 	end
 	--calculate ship position
-	ship.x+=ship.spd.x
-	ship.y+=ship.spd.y
+	ship.x+=ship.sx
+	ship.y+=ship.sy
 	--animate flame
 	if flame>9 then flame=5
 	else flame+=1
@@ -181,15 +183,15 @@ function draw_game()
 	end
 	-- draw enemies
 	for enemy in all(enemies) do
-		spr(enemy.spr,enemy.x,enemy.y)
+		draw_sprite(enemy)
 	end
 	-- draw ship and flame
-	spr(ship.spr,ship.x,ship.y)
+	draw_sprite(ship)
 	if flame <=9 then spr(flame,ship.x,ship.y+8)
 	end
 	--draw lasers and muzzle
 	for laser in all(lasers) do
-		spr(laser.spr,laser.x,laser.y)
+		draw_sprite(laser)
 	end
 	if muzzle>0 then
 		circfill(ship.x+3,ship.y-2,muzzle,muzzle>2 and 12 or 7)
