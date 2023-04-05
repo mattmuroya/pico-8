@@ -23,7 +23,7 @@ function _draw()
 	elseif mode=="over" then draw_over()
 	end
 	-- debug
-	-- print("> "..(enemies and #enemies or '0'),1,122,7)
+	log(lasers and #lasers or 0)
 end
 
 function start_game()
@@ -63,6 +63,10 @@ function start_game()
 end
 -->8
 -- utils
+
+function log(input)
+	printh("> "..input)
+end
 
 function blink()
 	local frames = {5,5,5,5,5,5,5,5,5,6,6,7,7,6,6}
