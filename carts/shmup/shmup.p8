@@ -22,8 +22,6 @@ function _draw()
 	elseif mode=="start" then draw_start()
 	elseif mode=="over" then draw_over()
 	end
-	-- debug
-	log(lasers and #lasers or 0)
 end
 
 function start_game()
@@ -59,7 +57,7 @@ function start_game()
 	})
 	-- init player stats
 	score=10000
-	lives=2
+	lives=4
 end
 -->8
 -- utils
@@ -76,6 +74,16 @@ end
 
 function draw_sprite(sprite)
 	spr(sprite.spr,sprite.x,sprite.y)
+end
+
+function collide(a,b)
+	if a.y>b.y+7 or
+			a.y+7<b.y or
+			a.x>b.x+7 or
+			a.x+7<b.x then
+		return false
+		else return true
+	end
 end
 -->8
 -- update functions
@@ -120,6 +128,13 @@ function update_game()
 	--calculate ship position
 	ship.x+=ship.sx
 	ship.y+=ship.sy
+	-- reset position if hit bound
+	if ship.x>=120 then	ship.x=120
+	elseif ship.x<=0 then	ship.x=0
+	end
+	if ship.y>=120 then	ship.y=120
+	elseif ship.y<=0 then	ship.y=0
+	end
 	--animate flame
 	if flame>9 then flame=5
 	else flame+=1
@@ -152,12 +167,25 @@ function update_game()
 		else enemy.spr=37
 		end
 	end
-	-- reset position if hit bound
-	if ship.x>=120 then	ship.x=120
-	elseif ship.x<=0 then	ship.x=0
+	-- collied lasers x enemies
+	for enemy in all(enemies) do
+		for laser in all(lasers) do
+			if collide(enemy,laser) then
+				sfx(1)
+				del(enemies, enemy)
+			end
+		end
 	end
-	if ship.y>=120 then	ship.y=120
-	elseif ship.y<=0 then	ship.y=0
+	-- collide ship x enemies
+	for enemy in all(enemies) do
+		if collide(enemy,ship) then
+			sfx(1)
+			lives-=1
+		end
+	end
+	-- check for game over
+	if lives<=0 then
+		mode="over"
 	end
 end
 
@@ -376,3 +404,4 @@ __label__
 
 __sfx__
 000100002f3502e350363502c35031350293502d350273502635024350243502335022350203501e3501c3501a350183501535013350113500e3500b350073500435003350003000030002000005000050000500
+000100003f6503b650316502c65028650226501c6501765014650116500e6500c6500965008650066500465002650026500065000000000000000000000000000000000000000000000000000000000000000000
