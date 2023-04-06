@@ -7,10 +7,10 @@ function _init()
 	cls(0)
 	mode="start"
 	blink_t=1
+	t=0
 end
 
 function _update()
-	blink_t+=1
 	if mode=="game" then update_game()
 	elseif mode=="start" then update_start()
 	elseif mode=="over" then update_over()
@@ -26,6 +26,7 @@ end
 
 function start_game()
 	mode="game"
+	t=0
 	-- init stars
 	stars={}
 	for i=1,70 do
@@ -48,16 +49,14 @@ function start_game()
 	-- init lasers
 	lasers={}
 	muzzle=0
+	cooldown=0
 	-- init enemies
 	enemies={}
-	add(enemies,{
-		spr=37,
-		x=60,
-		y=10
-	})
+	spawn_enemy()
 	-- init player stats
-	score=10000
+	score=0
 	lives=4
+	invulnerable=0
 end
 -->8
 -- utils
@@ -85,10 +84,19 @@ function collide(a,b)
 		else return true
 	end
 end
+
+function spawn_enemy()
+	add(enemies,{
+		spr=37,
+		x=rnd(120),
+		y=-8
+	})
+end
 -->8
 -- update functions
 
 function update_game()
+	t+=1
 	--reset speed and sprite
 	ship.sx=0
 	ship.sy=0
@@ -140,14 +148,19 @@ function update_game()
 	else flame+=1
 	end
 	--fire laser
-	if btnp(5) then
-		add(lasers,{
-			x=ship.x,
-			y=ship.y-4,
-			spr=21
-		})
-		muzzle=5
-		sfx(0)
+	if btn(5) then
+		if cooldown==0 then
+			sfx(0,0)
+			add(lasers,{
+				x=ship.x,
+				y=ship.y-4,
+				spr=21
+			})
+			muzzle=5
+			cooldown=4
+		end
+	end
+	if cooldown>0 then cooldown-=1
 	end
 	--animate lasers and muzzle
 	for laser in all(lasers) do
@@ -162,26 +175,37 @@ function update_game()
 	-- animate enemies
 	for enemy in all(enemies) do
 		enemy.y+=1
-		if enemy.y>=128 then del(enemies,enemy)
+		if enemy.y>=128 then
+			del(enemies,enemy)
+			spawn_enemy()
 		elseif enemy.spr<40.9 then enemy.spr+=.1
 		else enemy.spr=37
 		end
 	end
-	-- collied lasers x enemies
+	-- collide lasers x enemies
 	for enemy in all(enemies) do
 		for laser in all(lasers) do
-			if collide(enemy,laser) then
-				sfx(1)
+			if enemy.y>=-4 and collide(enemy,laser) then
+				sfx(2)
 				del(enemies, enemy)
+				score+=1
+				del(lasers, laser)
+				spawn_enemy()
 			end
 		end
 	end
 	-- collide ship x enemies
-	for enemy in all(enemies) do
-		if collide(enemy,ship) then
-			sfx(1)
-			lives-=1
+	if invulnerable==0 then
+		for enemy in all(enemies) do
+			if collide(enemy,ship) then
+				sfx(1)
+				lives-=1
+				invulnerable=60
+				del(enemies,enemy)
+				spawn_enemy()
+			end
 		end
+	else invulnerable-=1
 	end
 	-- check for game over
 	if lives<=0 then
@@ -190,11 +214,13 @@ function update_game()
 end
 
 function update_start()
+	blink_t+=1
 	if btnp(5) or btnp(4) then start_game()
 	end
 end
 
 function update_over()
+	blink_t+=1
 	if btnp(5) or btnp(4) then mode="start"
 	end
 end
@@ -217,9 +243,11 @@ function draw_game()
 	for enemy in all(enemies) do
 		draw_sprite(enemy)
 	end
-	-- draw ship and flame
-	draw_sprite(ship)
-	if flame <=9 then spr(flame,ship.x,ship.y+8)
+	-- animate ship
+	if invulnerable==0 or sin(t/5)>0 then
+		draw_sprite(ship)
+		if flame <=9 then spr(flame,ship.x,ship.y+8)
+		end
 	end
 	--draw lasers and muzzle
 	for laser in all(lasers) do
@@ -403,5 +431,6 @@ __label__
 00000000000000000000000000000000000000000000600000000000000000000000000006000000000000000000000000000000000000000000000000000000
 
 __sfx__
-000100002f3502e350363502c35031350293502d350273502635024350243502335022350203501e3501c3501a350183501535013350113500e3500b350073500435003350003000030002000005000050000500
-000100003f6503b650316502c65028650226501c6501765014650116500e6500c6500965008650066500465002650026500065000000000000000000000000000000000000000000000000000000000000000000
+0001000035350313502d3502a3502735024350223501f3501d350193501735014350123500f3500d3500a3500635003350003500c1000b1000910007100051000310002100001000030002000005000050000500
+000500003c65038650336502f6502a6502765024650226501f6501c6501a650186501565013650116500f6500e6500b6500965007650046500265001650006500360002600026000160001600016000060000000
+0002000037650336502f6502a650276502165018650116500b650046500365002650086500a6501b6001e600166001a6001a6001a6001d600236000050015500105000f500005000050000500005000050000500
