@@ -6,8 +6,7 @@ __lua__
 function _init()
 	cls(0)
 	mode="start"
-	blink_t=1
-	t=0
+	t=1
 end
 
 function _update()
@@ -72,8 +71,8 @@ end
 
 function blink()
 	local frames = {5,5,5,5,5,5,5,5,5,6,6,7,7,6,6}
-	if blink_t>#frames then blink_t=1 end
-	return frames[blink_t]
+	if t>#frames then t=1 end
+	return frames[t]
 end
 
 function draw_sprite(sprite)
@@ -99,7 +98,6 @@ function spawn_enemy()
 		hp=5,
 		flash=0
 	})
-	log(tostring(enemies[#enemies].blue))
 end
 
 function explode(x,y)
@@ -122,6 +120,7 @@ end
 
 function update_game()
 	t+=1
+	if t>1000 then t=1 end
 	--reset speed and sprite
 	ship.sx=0
 	ship.sy=0
@@ -247,13 +246,13 @@ function update_game()
 end
 
 function update_start()
-	blink_t+=1
+	t+=1
 	if btnp(5) or btnp(4) then start_game()
 	end
 end
 
 function update_over()
-	blink_t+=1
+	t+=1
 	if btnp(5) or btnp(4) then mode="start"
 	end
 end
@@ -275,7 +274,7 @@ function draw_game()
 	-- draw enemies
 	for enemy in all(enemies) do
 		if enemy.flash>0 then
-			enemy.flash-=1 -- should maybe go in _update()
+			enemy.flash-=1
 			for i=1,15 do
 				pal(i,7)
 			end
@@ -297,7 +296,7 @@ function draw_game()
 	-- draw ship
 	if invulnerable==0 or sin(t/5)>0 then
 		if ship.flash>0 then
-			ship.flash-=1 -- should maybe go in _update()
+			ship.flash-=1
 			for i=1,15 do
 				pal(i,7)
 			end
@@ -318,7 +317,7 @@ function draw_game()
 	-- draw dissipations
 	for dissipation in all(dissipations) do
 		if dissipation.age>5 then
-			del(dissipations,dissipations)
+			del(dissipations,dissipation)
 		else
 			circfill(dissipation.x,dissipation.y,dissipation.age,dissipation.age>2 and 7 or 12)
 			circfill(dissipation.x+1,dissipation.y,dissipation.age,dissipation.age>2 and 7 or 12)
