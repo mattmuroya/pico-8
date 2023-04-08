@@ -55,8 +55,8 @@ function start_game()
 	-- init enemies
 	enemies={}
 	spawn_enemy()
-	-- init explosions
-	explosions={}
+	-- init particle system
+	particles={}
 	-- init player stats
 	score=0
 	lives=4
@@ -101,11 +101,26 @@ function spawn_enemy()
 end
 
 function explode(x,y)
-	add(explosions,{
-		x=x-4,
-		y=y-4,
-		age=0
+	add(particles,{
+		x=x,
+		y=y,
+		sx=0,
+		sy=0,
+		age=0,
+		max=0,
+		r=10
 	})
+	for i=1,20 do
+		add(particles,{
+			x=x,
+			y=y,
+			sx=(rnd()-.5)*5,
+			sy=(rnd()-.5)*5,
+			age=flr(rnd(2)),
+			max=10+rnd(10),
+			r=rnd(3)+1
+		})
+	end
 end
 
 function dissipate(x,y)
@@ -216,9 +231,9 @@ function update_game()
 				enemy.hp-=1
 				dissipate(laser.x,laser.y)
 				if enemy.hp<=0 then
-					sfx(2)
+					sfx(4)
 					del(enemies, enemy)
-					explode(enemy.x,enemy.y)
+					explode(enemy.x+4,enemy.y+4)
 					score+=1
 					spawn_enemy()
 				end
@@ -263,7 +278,6 @@ function draw_game()
 	cls(0)
 	-- draw starfield
 	for star in all(stars) do
-		local color=6
 		if star.spd<1 then color=1
 		elseif star.spd<1.5 then color=13
 		end
@@ -285,12 +299,25 @@ function draw_game()
 		draw_sprite(enemy)
 		pal()
 	end
-	-- draw explosions
-	for exp in all(explosions) do
-		local frames={64,64,66,66,68,68,68,70,70,70,72,72,72}
-		spr(frames[exp.age],exp.x,exp.y,2,2)
-		exp.age+=1
-		if exp.age>#frames then del(explosions,exp)
+	-- draw particle explosion
+	for p in all(particles) do
+		local color=7
+		if p.age>16 then color=5
+		elseif p.age>12 then color=2
+		elseif p.age>8 then color=8
+		elseif p.age>5 then color=9
+		elseif p.age>3 then color=10
+		end
+		circfill(p.x,p.y,p.r,color)
+		p.x+=p.sx
+		p.y+=p.sy
+		p.age+=1
+		p.sx*=.9
+		p.sy*=.9
+		if p.age>p.max then
+			p.r-=0.5
+			if p.r<=0 then del(particles,p)
+			end
 		end
 	end
 	-- draw ship
@@ -315,13 +342,13 @@ function draw_game()
 		circfill(ship.x+4,ship.y-2,muzzle,muzzle>2 and 12 or 7)
 	end
 	-- draw dissipations
-	for dissipation in all(dissipations) do
-		if dissipation.age>5 then
-			del(dissipations,dissipation)
+	for d in all(dissipations) do
+		if d.age>5 then
+			del(dissipations,d)
 		else
-			circfill(dissipation.x,dissipation.y,dissipation.age,dissipation.age>2 and 7 or 12)
-			circfill(dissipation.x+1,dissipation.y,dissipation.age,dissipation.age>2 and 7 or 12)
-			dissipation.age+=1
+			circfill(d.x,d.y,d.age,d.age>2 and 7 or 12)
+			circfill(d.x+1,d.y,d.age,d.age>2 and 7 or 12)
+			d.age+=1
 		end
 	end
 	-- draw player stats
@@ -522,7 +549,8 @@ __label__
 00000000000000000000000000000000000000000000600000000000000000000000000006000000000000000000000000000000000000000000000000000000
 
 __sfx__
-000100002d350293502635023350203501d3501a3501835015350113500d3500a3500735003350003500a3000630003300003000c1000b1000910007100051000310002100001000030002000005000050000500
+000100002d340293402634023340203401d3401a3401834015340113400d3400a3400734003340003400a3000630003300003000c1000b1000910007100051000310002100001000030002000005000050000500
 000100002d6502e6502e6502e6501f3501e3501e3502965028650276502860016350163501535024650236502565027650296502c6501c600006001c6001f60003600026002460029600016002e600356003a600
 00050000375503455031550305502f5502d5502855026550245502255020550215501f5501e5501a55019550175501655013550125500e5500b5500955007550045500255001550135001d500005000050000500
 000200000b3500b3500a3500935008350063500430002300093000930000300003001e30000300003000030000300003000030000300003000030000300003000030000300003000030000300003000030000300
+00050000316402a640206401664013640106400e6400c640076400564004640036400264001640006400064000630006200061000600000000000000000000000000021600000000000000000000000000000000
