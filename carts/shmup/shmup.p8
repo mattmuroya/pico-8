@@ -44,14 +44,16 @@ function start_game()
 		xy=0,
 		flash=0
 	}
-	--init flame
+	-- nit flame
 	flame=5
 	-- init lasers
 	lasers={}
 	muzzle=0
 	cooldown=0
-	--init dissipations
-	dissipations={}
+	-- init dissipations
+	-- dissipations={}
+	-- init shockwaves
+	shwaves={}
 	-- init enemies
 	enemies={}
 	spawn_enemy()
@@ -100,7 +102,7 @@ function spawn_enemy()
 	})
 end
 
-function explode(x,y)
+function explode(x,y,is_blue)
 	add(particles,{
 		x=x,
 		y=y,
@@ -108,7 +110,8 @@ function explode(x,y)
 		sy=0,
 		age=0,
 		max=0,
-		r=10
+		r=10,
+		is_blue=is_blue
 	})
 	for i=1,20 do
 		add(particles,{
@@ -118,17 +121,67 @@ function explode(x,y)
 			sy=(rnd()-.5)*5,
 			age=flr(rnd(2)),
 			max=10+rnd(10),
-			r=rnd(3)+1
+			r=rnd(3)+1,
+			is_blue=is_blue
+		})
+	end
+	for i=1,20 do
+		add(particles,{
+			x=x,
+			y=y,
+			sx=(rnd()-.5)*10,
+			sy=(rnd()-.5)*10,
+			age=flr(rnd(2)),
+			max=10+rnd(10),
+			r=rnd(3)+1, -- not really a radius but that's ok
+			spark=true
 		})
 	end
 end
 
-function dissipate(x,y)
-	add(dissipations,{
-		x=x+3,
-		y=y+3,
-		age=0
+-- function dissipate(x,y,r)
+-- 	add(dissipations,{
+-- 		x=x+4,
+-- 		y=y+4,
+-- 		age=0
+-- 	})
+-- end
+
+function shwave(x,y,r,target_r,spd,color)
+	add(shwaves,{
+		x=x,
+		y=y,
+		r=r,
+		target_r=target_r,
+		spd=spd,
+		color=color
 	})
+end
+
+function smol_sparks(x,y)
+	for i=1,2 do
+		add(particles,{
+			x=x,
+			y=y,
+			sx=(rnd()-.5)*5,
+			sy=(rnd()-.8)*5,
+			age=flr(rnd(2)),
+			max=2+rnd(2),
+			r=rnd(3)+1, -- not really a radius but that's ok
+			spark=true
+		})
+	end
+end
+
+function step_color(age, is_blue)
+	local steps=is_blue and {6,12,13,1} or {10,9,8,2}
+	if age>16 then return 5
+	elseif age>12 then return steps[4]
+	elseif age>8 then return steps[3]
+	elseif age>5 then return steps[2]
+	elseif age>3 then return steps[1]
+	else return 7
+	end
 end
 -->8
 -- update functions
@@ -229,11 +282,14 @@ function update_game()
 				enemy.flash=2
 				del(lasers, laser)
 				enemy.hp-=1
-				dissipate(laser.x,laser.y)
+				-- dissipate(laser.x,laser.y)
+				shwave(laser.x+4,laser.y+4,3,6,1,12)
+				smol_sparks(laser.x+4,laser.y+4)
 				if enemy.hp<=0 then
 					sfx(4)
 					del(enemies, enemy)
-					explode(enemy.x+4,enemy.y+4)
+					explode(enemy.x+4,enemy.y+4,false)
+					shwave(enemy.x+4,enemy.y+4,3,28,3,6)
 					score+=1
 					spawn_enemy()
 				end
@@ -245,6 +301,8 @@ function update_game()
 		for enemy in all(enemies) do
 			if collide(enemy,ship) then
 				sfx(1)
+				explode(ship.x+4,ship.y+4,true)
+				shwave(ship.x+4,ship.y+4,3,28,3,6)
 				ship.flash=2
 				lives-=1
 				invulnerable=60
@@ -278,6 +336,7 @@ function draw_game()
 	cls(0)
 	-- draw starfield
 	for star in all(stars) do
+		local color=6
 		if star.spd<1 then color=1
 		elseif star.spd<1.5 then color=13
 		end
@@ -301,14 +360,9 @@ function draw_game()
 	end
 	-- draw particle explosion
 	for p in all(particles) do
-		local color=7
-		if p.age>16 then color=5
-		elseif p.age>12 then color=2
-		elseif p.age>8 then color=8
-		elseif p.age>5 then color=9
-		elseif p.age>3 then color=10
+		if p.spark then pset(p.x,p.y,6)
+		else circfill(p.x,p.y,p.r,step_color(p.age,p.is_blue))
 		end
-		circfill(p.x,p.y,p.r,color)
 		p.x+=p.sx
 		p.y+=p.sy
 		p.age+=1
@@ -342,13 +396,20 @@ function draw_game()
 		circfill(ship.x+4,ship.y-2,muzzle,muzzle>2 and 12 or 7)
 	end
 	-- draw dissipations
-	for d in all(dissipations) do
-		if d.age>5 then
-			del(dissipations,d)
-		else
-			circfill(d.x,d.y,d.age,d.age>2 and 7 or 12)
-			circfill(d.x+1,d.y,d.age,d.age>2 and 7 or 12)
-			d.age+=1
+	-- for d in all(dissipations) do
+	-- 	if d.age>5 then
+	-- 		del(dissipations,d)
+	-- 	else
+	-- 		circ(d.x,d.y,d.age,d.age>2 and 7 or 12)
+	-- 		-- circ(d.x+1,d.y,d.age,d.age>2 and 7 or 12)
+	-- 		d.age+=1
+	-- 	end
+	-- end
+	-- draw shwaves
+	for s in all(shwaves) do
+		circ(s.x,s.y,s.r,s.color)
+		if s.r<s.target_r then s.r+=s.spd
+		else del(shwaves,s)
 		end
 	end
 	-- draw player stats
