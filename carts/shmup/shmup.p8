@@ -16,8 +16,6 @@ function _update()
 	blink_t+=1
 	if blink_t>16 then blink_t=1
 	end
-	log(t)
-	-- if t>1000 then t=1 end
 	if mode=="game" then update_game()
 	elseif mode=="wave_text" then update_wave_text()
 	elseif mode=="start" then update_start()
@@ -57,7 +55,7 @@ function start_game()
 	ship=make_sprite()
 	ship.spr=2
 	ship.x=60
-	ship.y=60
+	ship.y=80
 	ship.sx=0
 	ship.sy=0
 	-- init flame
@@ -125,7 +123,37 @@ end
 
 function spawn_wave(wave)
 	t=1
-	spawn_enemy(wave)
+	local enemy_arr
+	if wave==1 then
+		enemy_arr={
+			{0,1,1,1,1,1,1,1,1,0},
+			{0,1,1,1,1,1,1,1,1,0},
+			{0,1,1,1,1,1,1,1,1,0},
+			{0,1,1,1,1,1,1,1,1,0}
+		}
+	elseif wave==2 then
+		enemy_arr={
+			{1,1,2,2,1,1,2,2,1,1},
+			{1,1,2,2,1,1,2,2,1,1},
+			{1,1,2,2,1,1,2,2,1,1},
+			{1,1,2,2,1,1,2,2,1,1}
+		}
+	elseif wave==3 then
+		enemy_arr={
+			{3,2,1,2,3,3,2,1,2,3},
+			{3,2,1,2,3,3,2,1,2,3},
+			{3,2,1,2,3,3,2,1,2,3},
+			{3,3,3,3,3,3,3,3,3,3}
+		}
+	elseif wave==4 then
+		enemy_arr={
+			{0,0,0,0,0,0,0,0,0,0},
+			{0,0,0,0,4,0,0,0,0,0},
+			{0,0,0,0,0,0,0,0,0,0},
+			{0,0,0,0,0,0,0,0,0,0}
+		}
+	end
+	place_enemies(enemy_arr)
 end
 
 function next_wave()
@@ -143,10 +171,13 @@ function next_wave()
 	end
 end
 
-function spawn_enemy(type)
+function spawn_enemy(type,x,y)
 	local e=make_sprite()
-	e.x=rnd(type==4 and 112 or 120)
-	e.y=-8
+	e.x=x
+	e.y=y-64
+	e.target_x=x
+	e.target_y=y
+	e.mission="fly_in"
 	if type==4 then -- boss
 		e.w=2
 		e.h=2
@@ -162,17 +193,27 @@ function spawn_enemy(type)
 		e.frames={41,42}
 		e.anim_spd=0.3
 	elseif type==2 then
-		e.hp=2
+		e.hp=3
 		e.spr=53
 		e.frames={53,54,55,56}
 		e.anim_spd=1
 	else
-		e.hp=1
+		e.hp=3
 		e.spr=37
 		e.frames={37,38,39,40}
 		e.anim_spd=0.1
 	end
 	add(enemies,e)
+end
+
+function place_enemies(arr)
+	for y=1,4 do
+		for x=1,10 do
+			if arr[y][x]!=0 then
+				spawn_enemy(arr[y][x],x*12-6,y*12+4)
+			end
+		end
+	end
 end
 
 function explode(x,y,is_blue)
@@ -246,6 +287,17 @@ function step_color(age, is_blue)
 	elseif age>5 then return steps[2]
 	elseif age>3 then return steps[1]
 	else return 7
+	end
+end
+-->8
+-- enemy behavior
+
+function perform_action(e)
+	if e.mission=="fly_in" then
+		e.y+=1
+		if e.y>=e.target_y then e.mission="defend" end
+	elseif e.mission=="defend" then
+	elseif e.mission=="attack" then
 	end
 end
 -->8
@@ -329,10 +381,9 @@ function update_game()
 	end
 	-- animate enemies
 	for e in all(enemies) do
-		e.y+=1
+		perform_action(e) -- mission
 		if e.y>=128 then
 			del(enemies,e)
-			-- spawn_enemy(wave)
 		else
 			e.frame+=e.anim_spd
 			if flr(e.frame) > #e.frames then
