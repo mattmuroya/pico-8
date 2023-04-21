@@ -122,14 +122,15 @@ function collide(a,b)
 end
 
 function spawn_wave(wave)
+	sfx(28)
 	t=1
 	local enemy_arr
 	if wave==1 then
 		enemy_arr={
-			{0,1,1,1,1,1,1,1,1,0},
-			{0,1,1,1,1,1,1,1,1,0},
-			{0,1,1,1,1,1,1,1,1,0},
-			{0,1,1,1,1,1,1,1,1,0}
+			{1,1,1,1,1,1,1,1,1,1},
+			{1,1,1,1,1,1,1,1,1,1},
+			{1,1,1,1,1,1,1,1,1,1},
+			{1,1,1,1,1,1,1,1,1,1}
 		}
 	elseif wave==2 then
 		enemy_arr={
@@ -171,13 +172,14 @@ function next_wave()
 	end
 end
 
-function spawn_enemy(type,x,y)
+function spawn_enemy(type,x,y,wait)
 	local e=make_sprite()
-	e.x=x
+	e.x=x*1.25-32
 	e.y=y-64
 	e.target_x=x
 	e.target_y=y
 	e.mission="fly_in"
+	e.wait=wait
 	if type==4 then -- boss
 		e.w=2
 		e.h=2
@@ -210,7 +212,7 @@ function place_enemies(arr)
 	for y=1,4 do
 		for x=1,10 do
 			if arr[y][x]!=0 then
-				spawn_enemy(arr[y][x],x*12-6,y*12+4)
+				spawn_enemy(arr[y][x],x*12-6,y*12+4,x*3)
 			end
 		end
 	end
@@ -293,11 +295,26 @@ end
 -- enemy behavior
 
 function perform_action(e)
+	if e.wait>0 then
+		e.wait-=1
+		return
+	end
 	if e.mission=="fly_in" then
-		e.y+=1
-		if e.y>=e.target_y then e.mission="defend" end
+		e.y+=(e.target_y - e.y)/10 -- easing function
+		e.x+=(e.target_x - e.x)/10
+		if e.y>=e.target_y - 0.1 then e.mission="defend" end
 	elseif e.mission=="defend" then
 	elseif e.mission=="attack" then
+		e.y+=1
+	end
+end
+
+function picking()
+	local e=rnd(enemies)
+	if mode=="game" and
+	e.mission=="defend"
+	and t%60==0 then
+		e.mission="attack"
 	end
 end
 -->8
@@ -439,7 +456,11 @@ function update_game()
 	if mode=="game" and #enemies==0 then
 		next_wave()
 	end
+
+	-- picking
+	picking()
 end
+
 
 function update_wave_text()
 	update_game()
@@ -797,6 +818,7 @@ __sfx__
 510c0000143151931520325143251931520315163251932516315183151932516325183151931516325183251b3151e315183251b3251e315183151b3251e325183151b3151d325183251b3151d315183251b325
 010c00000175001750017500175001750017500175001750037500375003750037500375003750037500375006750067500675006750067500675006750067500575005750057500575005750057500575005750
 010c00001d55024500245001b55519555245001e550245002450029500165502450024500245001e550245001e55024500245001d5551b555245001d5502450024500295001855024500275002a5002950028500
+010700003d5723b57239562385523655233552315522f5422e5422c5422953228532265322353221532205321e5321d5321b5321953217532165221352212522105220e5120c5120a51208512065120451202512
 __music__
 04 04050644
 00 07084749
