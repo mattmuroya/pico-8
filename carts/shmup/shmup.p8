@@ -97,7 +97,10 @@ function make_sprite()
 	return {
 		x=0,
 		y=0,
+		sx=0,
+		sy=0,
 		flash=0,
+		shake=0,
 		frame=1,
 		spr=0,
 		w=1,
@@ -107,8 +110,13 @@ function make_sprite()
 	}
 end
 
-function draw_sprite(sprite)
-	spr(sprite.spr,sprite.x,sprite.y,sprite.w,sprite.h)
+function draw_sprite(s)
+	if s.shake>0 then
+		s.shake-=1
+		s.x+=sin(t/1.5)
+		-- s.y+=abs(sin(t/1.5))
+	end
+	spr(s.spr,s.x,s.y,s.w,s.h)
 end
 
 function collide(a,b)
@@ -126,6 +134,7 @@ function spawn_wave(wave)
 	t=1
 	local enemy_arr
 	if wave==1 then
+		attack_freq=60 -- frames
 		enemy_arr={
 			{1,1,1,1,1,1,1,1,1,1},
 			{1,1,1,1,1,1,1,1,1,1},
@@ -133,6 +142,7 @@ function spawn_wave(wave)
 			{1,1,1,1,1,1,1,1,1,1}
 		}
 	elseif wave==2 then
+		attack_freq=45
 		enemy_arr={
 			{1,1,2,2,1,1,2,2,1,1},
 			{1,1,2,2,1,1,2,2,1,1},
@@ -140,6 +150,7 @@ function spawn_wave(wave)
 			{1,1,2,2,1,1,2,2,1,1}
 		}
 	elseif wave==3 then
+		attack_freq=30
 		enemy_arr={
 			{3,2,1,2,3,3,2,1,2,3},
 			{3,2,1,2,3,3,2,1,2,3},
@@ -147,6 +158,7 @@ function spawn_wave(wave)
 			{3,3,3,3,3,3,3,3,3,3}
 		}
 	elseif wave==4 then
+		attack_freq=30
 		enemy_arr={
 			{0,0,0,0,0,0,0,0,0,0},
 			{0,0,0,0,4,0,0,0,0,0},
@@ -174,6 +186,7 @@ end
 
 function spawn_enemy(type,x,y,wait)
 	local e=make_sprite()
+	e.type=type
 	e.x=x*1.25-32
 	e.y=y-64
 	e.target_x=x
@@ -304,18 +317,62 @@ function perform_action(e)
 		e.x+=(e.target_x - e.x)/10
 		if e.y>=e.target_y - 0.1 then e.mission="defend" end
 	elseif e.mission=="defend" then
+		log('df',t)
 	elseif e.mission=="attack" then
-		e.y+=1
+		log('att',t)
+		if e.type==1 then
+			e.sy=1
+			e.sx=sin(t/45)
+			if e.x<32 then
+				e.sx+=1-(e.x/32)
+			elseif e.x>88 then
+				e.sx-=(e.x-88)/32
+			end
+			move(e)
+		elseif e.type==2 then
+			e.sy=2.5
+			e.sx=sin(t/25)
+			if e.x<32 then
+				e.sx+=1-(e.x/32)
+			elseif e.x>88 then
+				e.sx-=(e.x-88)/32
+			end
+			move(e)
+		elseif e.type==3 then
+			if e.sx==0 then
+				if e.y>=ship.y then
+					e.sy=0
+					if e.x>ship.x then e.sx=-2
+					else e.sx=2	end
+				else e.sy=1 end
+			end
+			move(e)
+		elseif e.type==4 then
+			e.sy=0.35
+			if e.y>110 then e.sy=1 end
+			move(e)
+		end
 	end
 end
 
 function picking()
-	local e=rnd(enemies)
-	if mode=="game" and
-	e.mission=="defend"
-	and t%60==0 then
-		e.mission="attack"
+	if mode!="game" then return end
+	if t%attack_freq==0 then
+		local i = flr(rnd(min(#enemies,10))) -- 0 to 9
+		i=#enemies-i
+		local e=enemies[i]
+		if e.mission=="defend" then
+			e.mission="attack"
+			e.anim_spd*=2
+			e.shake=30
+			e.wait=30
+		end
 	end
+end
+
+function move(obj)
+	obj.x+=obj.sx
+	obj.y+=obj.sy
 end
 -->8
 -- update functions
@@ -399,7 +456,7 @@ function update_game()
 	-- animate enemies
 	for e in all(enemies) do
 		perform_action(e) -- mission
-		if e.y>=128 then
+		if e.mission!="fly_in" and (e.y>=128 or e.x>128 or e.x<-8) then
 			del(enemies,e)
 		else
 			e.frame+=e.anim_spd
