@@ -14,7 +14,7 @@ function _init()
 	poke(0x5f2d,1)
 	mouse_x=0
 	mouse_y=0
-	platmap={
+	platform_map={
 		{ 0, 0, 0,-1,-1,-1, 0, 0},
 		{-1,-1, 0,-1, 0, 0, 0,-1},
 		{-1,-1, 0,-1, 0,-1,-1,-1},
@@ -26,20 +26,30 @@ function _init()
 	}
 	wait={30,45,60,75,90,105,120,135}
 end
-
 -->8
 -- update
 
 function _update()
 	mouse_x=stat(32)
 	mouse_y=stat(33)
+	local min_x,max_x=mouse_x-32,mouse_x+32
+	local min_y,max_y=mouse_y-32,mouse_y+32
 	for i=1,8 do
-		if wait[9-i]<=0 then
-			for j=1,8 do
-				if platmap[i][j]>=0 then platmap[i][j]+=0.05 end
-				if platmap[i][j]>=1 then platmap[i][j]=1 end
+		for j=1,8 do
+			local x,y=j*16-8,i*16-8
+			local current,target=platform_map[i][j],nil
+			if min_x<=x and x<=max_x and
+				min_y<=y and y<=max_y then
+					target=1 else target=0
 			end
-		else wait[9-i]-=1	end
+			if current>=0 then
+					if current>target then current-=0.1 end
+					if current<target then current+=0.1 end
+					if current>1 then current=1 end
+					if current<0 then current=0 end
+			end
+			platform_map[i][j]=current
+		end
 	end
 end
 -->8
@@ -47,20 +57,20 @@ end
 
 function _draw()
 	cls(0)
-	print_plats()
+	print_platforms()
 	display_cursor()
 end
 
-function print_plats()
+function print_platforms()
 	for i=1,8 do
 		for j=1,8 do
-			local scale=platmap[i][j]
+			local scale=platform_map[i][j]
 			if scale>=0 then
 				sspr(8,0,16,22,
-					-- plat's center coordinate minus half its dimensions
-					-- plat's min y coord plus up to 2.5x height as scale decreases
+					-- platform's center x coordinate minus half its dimensions
+					-- platform's min y coord plus up to 1.5x height as scale decreases
 					(j*16-8) - 16*scale/2,
-					(i-1)*16 + (1-scale)*55,
+					(i-1)*16 + (1-scale)*33,
 					16*scale,
 					22*scale
 				)
@@ -70,7 +80,7 @@ function print_plats()
 end
 
 function display_cursor()
-	print(mouse_x..", "..mouse_y,2,2,7)
+	print("("..mouse_x..", "..mouse_y..")",2,2,7)
 	spr(0,mouse_x-4,mouse_y-4)
 end
 __gfx__
