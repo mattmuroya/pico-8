@@ -1,85 +1,120 @@
 pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
+function log(input)
+	printh("> "..tostr(input))
+end
+
 function _init()
 	p1={
-		p={ -- position
-			x=64,
-			y=64
-		},
-		v={ -- velocity
-			x=0,
-			y=0
-		},
-		r=3, -- radius
-		a=0.8, -- acceleration
-		s=3, -- top speed
-		d=0.8 -- dampening
+		pos={x=64,y=64}, -- position
+		vel={x=0,y=0}, -- velocity
+		dir=0.875, -- facing direction (angle)
+		rad=3, -- radius
+		acc=0.8, -- acceleration
+		max=3, -- max speed
+		dmp=0.8, -- dampening
+		frt=10, -- fire rate (shots/second)
+		cdn=0 -- weapon cooldown (frames)
 	}
 	cam={
-		p={x=0,y=0}
+		pos={x=0,y=0}
 	}
+	blobs={}
 end
 
 function _update()
-	if btn(0) then p1.v.x-=p1.a end
-	if btn(1) then p1.v.x+=p1.a end
-	if btn(2) then p1.v.y-=p1.a end
-	if btn(3) then p1.v.y+=p1.a end
-
-	p1.v.x*=p1.d
-	p1.v.y*=p1.d
-	
-	if abs(p1.v.x)<0.1 then p1.v.x=0 end
-	if abs(p1.v.y)<0.1 then p1.v.y=0 end
-
-	local speed=sqrt(p1.v.x^2+p1.v.y^2)
-
-	if speed>p1.s then
-		p1.v.x*=p1.s/speed
-		p1.v.y*=p1.s/speed
-	end
-
-	p1.p.x+=p1.v.x
-	if c_map(p1) then
-		p1.p.x-=p1.v.x
-		p1.v.x=0
-	end
-	
-	p1.p.y+=p1.v.y
-	if c_map(p1) then
-		p1.p.y-=p1.v.y
-		p1.v.y=0
-	end
-
-	cam.p.x=(p1.p.x)-64
-	cam.p.y=(p1.p.y)-64
+	move_player()
+	shoot()
+	move_blobs()
 end
 
 function _draw()
-	cls(0)
-	map(0,0)
-	circfill(p1.p.x,p1.p.y,p1.r,11)
-	follow_cam()
+	cls()
+	map()
+	draw_player(p1)
+	draw_blobs()
+	set_cam(p1.pos.x-64,p1.pos.y-64)
 end
 
-function follow_cam()
-	if cam.p.x<=0 then cam.p.x=0 end
-	if cam.p.x>=128 then cam.p.x=128 end
-	if cam.p.y<=0 then cam.p.y=0 end
-	if cam.p.y>=128 then cam.p.y=128 end
-	camera(cam.p.x,cam.p.y)
+function move_player()
+	local input=false
+	if btn(0) then input=true p1.vel.x-=p1.acc end
+	if btn(1) then input=true p1.vel.x+=p1.acc end
+	if btn(2) then input=true p1.vel.y-=p1.acc end
+	if btn(3) then input=true p1.vel.y+=p1.acc end
+	if input then p1.dir=atan2(p1.vel.x,p1.vel.y) end
+	p1.vel.x*=p1.dmp
+	p1.vel.y*=p1.dmp
+	if abs(p1.vel.x)<0.1 then p1.vel.x=0 end
+	if abs(p1.vel.y)<0.1 then p1.vel.y=0 end
+	local speed=sqrt(p1.vel.x^2+p1.vel.y^2)
+	if speed>p1.max then
+		p1.vel.x*=p1.max/speed
+		p1.vel.y*=p1.max/speed
+	end
+	p1.pos.x+=p1.vel.x
+	if collide_map(p1) then
+		p1.pos.x-=p1.vel.x
+		-- p1.vel.x=0
+	end
+	p1.pos.y+=p1.vel.y
+	if collide_map(p1) then
+		p1.pos.y-=p1.vel.y
+		-- p1.vel.y=0
+	end
 end
 
-function c_map(p)
-	local x1,y1=(p.p.x+p.r)/8,(p.p.y+p.r)/8
-	local x2,y2=(p.p.x-p.r)/8,(p.p.y-p.r)/8
+function collide_map(pl)
+	-- TODO: fix collsion detection for deceleration
+	local x1,y1=(pl.pos.x+pl.rad)/8,(pl.pos.y+pl.rad)/8
+	local x2,y2=(pl.pos.x-pl.rad)/8,(pl.pos.y-pl.rad)/8
 	return fget(mget(x1,y1),0)
 		or fget(mget(x1,y2),0)
 		or fget(mget(x2,y2),0)
 		or fget(mget(x2,y1),0)
 end
-	
+
+function shoot()
+	if btn(5) and p1.cdn<=0 then
+		add(blobs,{
+			pos={x=p1.pos.x,y=p1.pos.y},
+			dir=p1.dir,
+			age=10, -- frames
+		})
+		p1.cdn=(30/p1.frt)
+	elseif p1.cdn>0 then p1.cdn-=1 end
+end
+
+function move_blobs()
+	for b in all(blobs) do
+		if b.age<=0 then del(blobs,b)
+		else
+			b.pos.x+=cos(b.dir)*(4+rnd(2))
+			b.pos.y+=sin(b.dir)*(4+rnd(2))
+			b.age-=1
+		end
+	end
+end
+
+function draw_player(pl)
+	circfill(pl.pos.x,pl.pos.y,pl.rad,11)
+end
+
+function draw_blobs()
+	for b in all(blobs) do
+		circfill(b.pos.x,b.pos.y,2,0)
+	end
+end
+
+function set_cam(x,y)
+	if x<=0 then x=0 end
+	if x>=128 then x=128 end
+	if y<=0 then y=0 end
+	if y>=128 then y=128 end
+	camera(x,y)
+end
+
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000777777776666666655555555
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000777777776666666655555555
