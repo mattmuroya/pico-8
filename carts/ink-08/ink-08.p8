@@ -7,11 +7,13 @@ end
 
 function _init()
 	p1={
+		col=11, -- color
 		pos={x=64,y=64}, -- position
 		vel={x=0,y=0}, -- velocity
 		dir=0.875, -- facing direction (angle)
-		rad=3, -- radius
+		rad=4, -- radius
 		acc=0.8, -- acceleration
+		spd=0, -- current speed
 		max=3, -- max speed
 		dmp=0.8, -- dampening
 		frt=10, -- fire rate (shots/second)
@@ -20,21 +22,21 @@ function _init()
 	cam={
 		pos={x=0,y=0}
 	}
-	blobs={}
+	ptcs={}
 end
 
 function _update()
 	move_player()
-	shoot()
-	move_blobs()
+	shoot(p1)
+	move_ptcs()
 end
 
 function _draw()
 	cls()
 	map()
-	draw_player(p1)
-	draw_blobs()
 	set_cam(p1.pos.x-64,p1.pos.y-64)
+	draw_player(p1)
+	draw_ptcs()
 end
 
 function move_player()
@@ -48,10 +50,11 @@ function move_player()
 	p1.vel.y*=p1.dmp
 	if abs(p1.vel.x)<0.1 then p1.vel.x=0 end
 	if abs(p1.vel.y)<0.1 then p1.vel.y=0 end
-	local speed=sqrt(p1.vel.x^2+p1.vel.y^2)
-	if speed>p1.max then
-		p1.vel.x*=p1.max/speed
-		p1.vel.y*=p1.max/speed
+	p1.spd=sqrt(p1.vel.x^2+p1.vel.y^2)
+	if p1.spd>p1.max then
+		p1.vel.x*=p1.max/p1.spd
+		p1.vel.y*=p1.max/p1.spd
+		p1.spd=p1.max
 	end
 	p1.pos.x+=p1.vel.x
 	if collide_map(p1) then
@@ -75,35 +78,57 @@ function collide_map(pl)
 		or fget(mget(x2,y1),0)
 end
 
-function shoot()
-	if btn(5) and p1.cdn<=0 then
-		add(blobs,{
-			pos={x=p1.pos.x,y=p1.pos.y},
-			dir=p1.dir,
-			age=10, -- frames
+function shoot(pl)
+	if btn(5) and pl.cdn<=0 then
+		add(ptcs,{
+			type="blob",
+			act=pl, -- actor
+			col=pl.col,
+			pos={x=pl.pos.x,y=pl.pos.y},
+			dir=pl.dir+(rnd()-0.5)*0.0625,
+			rad=2,
+			dur=13, -- duration
 		})
-		p1.cdn=(30/p1.frt)
-	elseif p1.cdn>0 then p1.cdn-=1 end
+		for i=1,3 do
+			add(ptcs,{
+				type="muzzle",
+				act=pl,
+				col=pl.col,
+				pos={x=pl.pos.x,y=pl.pos.y},
+				dir=pl.dir+(rnd()-0.5)*0.35,
+				dur=4
+			})
+		end	
+		pl.cdn=(30/pl.frt)
+	elseif pl.cdn>0 then pl.cdn-=1 end
 end
 
-function move_blobs()
-	for b in all(blobs) do
-		if b.age<=0 then del(blobs,b)
+function move_ptcs()
+	local mult
+	for b in all(ptcs) do
+		if b.dur<=0 then del(ptcs,b)
 		else
-			b.pos.x+=cos(b.dir)*(4+rnd(2))
-			b.pos.y+=sin(b.dir)*(4+rnd(2))
-			b.age-=1
+			if b.type=="blob" then
+				b.pos.x+=cos(b.dir)*(3+b.act.spd)
+				b.pos.y+=sin(b.dir)*(3+b.act.spd) end
+			if b.type=="muzzle" then
+				b.pos.x+=cos(b.dir)*(1+b.dur)
+				b.pos.y+=sin(b.dir)*(1+b.dur) end
+			b.dur-=1
 		end
 	end
 end
 
 function draw_player(pl)
-	circfill(pl.pos.x,pl.pos.y,pl.rad,11)
+	circfill(pl.pos.x,pl.pos.y,pl.rad,pl.col)
 end
 
-function draw_blobs()
-	for b in all(blobs) do
-		circfill(b.pos.x,b.pos.y,2,0)
+function draw_ptcs()
+	for p in all(ptcs) do
+		if p.type=="blob" then
+			circfill(p.pos.x,p.pos.y,p.rad,p.col) end
+		if p.type=="muzzle" then
+			circfill(p.pos.x,p.pos.y,p.dur,p.col) end
 	end
 end
 
