@@ -11,114 +11,114 @@ end
 -- init
 
 function _init()
-  cls(0)
+	cls(0)
 	player={
-    x=16,
-    y=20,
-    dx=0,
-    dy=0,
-    spr=1,
-    rev=false,
-    frames={1,2},
-    i=1,
-    anim_spd=0.125
-  }
+		x=16,
+		y=20,
+		dx=0,
+		dy=0,
+		spr=1,
+		rev=false,
+		frames={1,2},
+		i=1,
+		anim_spd=0.125
+	}
 end
 
 -->8
 -- update
 
 function _update()
-  -- reset player movement
-  player.dx=0
-  player.dy=0
-  player.spr=1
-  -- get input and move player
-  if btn(0) or btn(1) or btn(2) or btn(3) then
-    move_player()
-    animate(player)
-  end
+	-- reset player movement
+	player.dx=0
+	player.dy=0
+	player.spr=1
+	-- get input and move player
+	if btn(0) or btn(1) or btn(2) or btn(3) then
+		move_player()
+		animate(player)
+	end
 end
 
 function move_player()
-  -- get x input
-  if btn(0) and btn(1) then
-    if last_xdir=="left" then
-      player.dx=1
-      player.rev=false
-    elseif last_xdir=="right" then
-      player.dx=-1
-      player.rev=true
-    end
-  elseif btn(0) then
-    last_xdir="left"
-    player.dx=-1
-    player.rev=true
-  elseif btn(1) then
-    last_xdir="right"
-    player.dx=1
-    player.rev=false
-  end
-  player.x+=player.dx
-  if cmap(player) then
-    player.x-=player.dx
-  end
-  -- get y input
-  if btn(2) and btn(3) then
-    if last_ydir=="up" then
-      player.dy=1
-    elseif last_ydir=="down" then
-      player.dy=-1
-    end
-  elseif btn(2) then
-    last_ydir="up"
-    player.dy=-1
-  elseif btn(3) then
-    last_ydir="down"
-    player.dy=1
-  end
-  player.y+=player.dy
-  if cmap(player) then
-    player.y-=player.dy
-  end
+	-- get x input
+	if btn(0) and btn(1) then
+		if last_xdir=="left" then
+			player.dx=2
+			player.rev=false
+		elseif last_xdir=="right" then
+			player.dx=-2
+			player.rev=true
+		end
+	elseif btn(0) then
+		last_xdir="left"
+		player.dx=-2
+		player.rev=true
+	elseif btn(1) then
+		last_xdir="right"
+		player.dx=2
+		player.rev=false
+	end
+	player.x+=player.dx
+	if cmap(player) then
+		player.x-=player.dx
+	end
+	-- get y input
+	if btn(2) and btn(3) then
+		if last_ydir=="up" then
+			player.dy=2
+		elseif last_ydir=="down" then
+			player.dy=-2
+		end
+	elseif btn(2) then
+		last_ydir="up"
+		player.dy=-2
+	elseif btn(3) then
+		last_ydir="down"
+		player.dy=2
+	end
+	player.y+=player.dy
+	if cmap(player) then
+		player.y-=player.dy
+	end
 end
 
 function cmap(p)
-  local x1,y1,x2,y2=p.x/8,(p.y+1)/8
-  local x2,y2=(p.x+7)/8,(p.y+7)/8
-  return fget(mget(x1,y1),0)
-    or fget(mget(x1,y2),0)
-    or fget(mget(x2,y2),0)
-    or fget(mget(x2,y1),0)
+	local x1,y1,x2,y2=p.x/8,(p.y+1)/8
+	local x2,y2=(p.x+7)/8,(p.y+7)/8
+	return fget(mget(x1,y1),0)
+		or fget(mget(x1,y2),0)
+		or fget(mget(x2,y2),0)
+		or fget(mget(x2,y1),0)
 end
 
 function animate(obj)
-  obj.i+=obj.anim_spd
-  if flr(obj.i)>#obj.frames then obj.i=1 end
-  obj.spr=obj.frames[flr(obj.i)]
+	obj.i+=obj.anim_spd
+	if flr(obj.i)>#obj.frames then obj.i=1 end
+	obj.spr=obj.frames[flr(obj.i)]
 end
 
 -->8
 -- draw
 
 function _draw()
-  cls(1)
-  map(0,0)
-  draw(player)
-  follow_cam()
+	cls(1)
+	map(0,0)
+	draw(player)
+	follow_cam()
 end
 
 function draw(obj)
-  spr(obj.spr,obj.x,obj.y,1,1,obj.rev)
+	spr(obj.spr,obj.x,obj.y,1,1,obj.rev)
 end
 
 function follow_cam()
-  cam_x,cam_y=player.x-60,player.y-60
-  if cam_x<=0 then cam_x=0 end
-  if cam_x>=128 then cam_x=128 end
-  if cam_y<=0 then cam_y=0 end
-  if cam_y>=128 then cam_y=128 end
-  camera(cam_x,cam_y)
+	cam_x,cam_y=player.x-60,player.y-60
+	if cam_x<=0 then cam_x=0 end
+	if cam_x>=128 then cam_x=128 end
+	if cam_y<=0 then cam_y=0 end
+	if cam_y>=128 then cam_y=128 end
+	camera(cam_x,cam_y)
 end
 
 __gfx__
