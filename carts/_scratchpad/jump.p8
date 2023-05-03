@@ -6,48 +6,65 @@ function log(input)
 end
 
 function _init()
-  player={
-    x=60,
-    y=60,
-    f=0,
-  }
-  y_force=0
-  jump_height=0
-  airborne=false
+  f=0
+  x=60
+  y=88
+  dy=0
+  -- grounded=true
+  -- boosting=false
+  -- falling=true
+  headroom=20
+
+  state="grounded"
 end
 
 function _update()
-  if btn(4) and airborne==false then
-    y_force=-4
-    airborne=true
-  end
+
+  -- grounded
+  if state=="grounded" then
+    if btn(4) then
+      state="boosting"
+      dy=-1
+      headroom-=1
+    end
   
-  if y_force<0 then -- moving upward
-    jump_height+=1
-  elseif y_force>0 then -- moving down
-    jump_height-=1
+  -- boosting
+  elseif state=="boosting" then
+    if btn(4) then -- if you are boosting and holding the btn,
+      if headroom>0 then -- if you have headroom left
+        headroom-=1 -- keep boosting and reduce headroom by 1
+      else -- if you have no headroom left, it means you've maxed out your jump
+        dy=1
+        state="falling" -- begin falling
+        headroom=20 -- reset headroom for next jump
+      end
+    else -- if you are boosting and have now let go of the btn,
+      dy=1
+      state="falling" -- then you are now falling
+      headroom=20 -- reset headroom
+    end
+
+  -- falling
+  elseif state=="falling" then
+    if fget(mget((x+4)/8,(y+8)/8),0) then
+      dy=0
+      if not btn(4) then
+        state="grounded"
+      end
+    end
   end
 
-  if jump_height>=8 then
-    y_force+=1
-  end
+  y+=dy
 
-  player.y+=y_force
-
-  if airborne and player.y==60 then -- player is airborn and new pos is ground
-    y_force=0
-    jump_height=0
-    airborne=false
-  end
-
-
+  log(y)
+  log(state)
 end
 
 
 function _draw()
   cls()
   map()
-  spr(player.f,player.x,player.y)
+  spr(f,x,y)
 end
 __gfx__
 000000000eeeeee0ccccccccbbbbbbbb44444444cccccccccccccccccccccccccccdddcccccccccccccccccc0000000000000000000000000000000000000000
