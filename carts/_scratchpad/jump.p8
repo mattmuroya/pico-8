@@ -10,61 +10,43 @@ function _init()
   x=60
   y=88
   dy=0
-  -- grounded=true
-  -- boosting=false
-  -- falling=true
-  headroom=20
-
   state="grounded"
+  headroom=20
 end
 
 function _update()
-
   -- grounded
-  if state=="grounded" then
-    if btn(4) then
-      state="boosting"
-      dy=-1
-      headroom-=1
-    end
-  
+  if state=="grounded" and btn(4) then
+    state="boosting"
+    headroom-=1
+    dy=-1
   -- boosting
   elseif state=="boosting" then
-    if btn(4) then -- if you are boosting and holding the btn,
-      if headroom>0 then -- if you have headroom left
-        headroom-=1 -- keep boosting and reduce headroom by 1
-      else -- if you have no headroom left, it means you've maxed out your jump
-        dy=1
-        state="falling" -- begin falling
-        headroom=20 -- reset headroom for next jump
-      end
-    else -- if you are boosting and have now let go of the btn,
+    if btn(4) and headroom>0 then
+      headroom-=1
+    else
+      state="falling"
+      headroom=20
       dy=1
-      state="falling" -- then you are now falling
-      headroom=20 -- reset headroom
     end
-
   -- falling
-  elseif state=="falling" then
-    if fget(mget((x+4)/8,(y+8)/8),0) then
-      dy=0
-      if not btn(4) then
-        state="grounded"
-      end
+  elseif state=="falling" and landed() then
+    if not btn(4) then
+      state="grounded"
     end
+    dy=0
   end
-
   y+=dy
-
-  log(y)
-  log(state)
 end
-
 
 function _draw()
   cls()
   map()
   spr(f,x,y)
+end
+
+function landed()
+  return fget(mget((x+4)/8,(y+8)/8),0)
 end
 __gfx__
 000000000eeeeee0ccccccccbbbbbbbb44444444cccccccccccccccccccccccccccdddcccccccccccccccccc0000000000000000000000000000000000000000
