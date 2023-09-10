@@ -1,3 +1,11 @@
 .DS_Store
 **.p8l
-_bbs
+backup
+bbs
+cdata
+cstore
+plates
+activity_log.txt
+config.txt
+log.txt
+sdl_controllers.txt
