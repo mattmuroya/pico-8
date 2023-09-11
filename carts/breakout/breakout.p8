@@ -186,7 +186,7 @@ function collide(ball, rect)
 			or ball.y - (rect.y + rect.h) > ball.r + 1 
 			or rect.x - ball.x > ball.r + 2
 			or ball.x - (rect.x + rect.w) > ball.r + 1
-			-- or ball is exactly 1 px out from the 
+			-- to-do: reject collision if ball at corner outside radius
 	)
 end
 
@@ -230,14 +230,12 @@ function draw_start()
 end
 
 function draw_over()
-	-- cls(3)
 	draw_game()
 	local str = "game over! press ❎ to retry"
 	print(str, 63 - (#str / 2) * 4, 60, 7)
 end
 
 function draw_clear()
-	-- cls(3)
 	draw_game()
 	local str = "you win! press ❎ to retry"
 	print(str, 63 - (#str / 2) * 4, 60, 7)
