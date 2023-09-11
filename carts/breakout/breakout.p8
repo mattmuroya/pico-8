@@ -1,13 +1,6 @@
 pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
--- utils
-
-function log(input)
-	printh("> " .. tostr(input))
-end
-
--->8
 -- main loop
 
 function _init()
@@ -18,17 +11,56 @@ end
 function _update60()
 	if mode == "start" then update_start() end
 	if mode == "over" then update_over() end
+	if mode == "clear" then update_over() end -- to-do: create clear screen update function
 	if mode == "game" then update_game() end
 end
 
 function _draw()
 	if mode == "start" then draw_start() end
 	if mode == "over" then draw_over() end
+	if mode == "clear" then draw_clear() end
 	if mode == "game" then draw_game() end
 end
 
 -->8
 -- update functions
+
+function init_game()
+	prev_collided = false
+	prev_defl_x = false
+
+	score = 0
+	max_lives = 4
+	lives = 4
+
+	paddle = {}
+	paddle.w = 24
+	paddle.h = 3
+	paddle.x = 40
+	paddle.y = 120
+	paddle.dx = 0
+
+	ball = {}
+	ball.r = 2
+	ball.x = 2
+	ball.y = 80
+	ball.dx = 1
+	ball.dy = 1
+	ball.c = 11
+
+	bricks = {}	
+
+	for i = 0, 48 do
+		make_brick(
+			1 + (i % 7) * 18, -- x
+			20 + flr(i / 7) * 6, -- y
+			17, -- w
+			4 -- h
+		)
+	end
+
+	mode = "game"
+end
 
 function update_start()
 	if btn(4) then init_game() end
@@ -75,11 +107,34 @@ function update_game()
 			mode = "over"
 		else
 			ball.x = 2
-			ball.y = 40
+			ball.y = 80
 			ball.dx = 1
 			ball.dy = 1
 		end
 	end
+
+	-- collide ball with bricks
+	local first_hit = true
+	local cleared = true
+	for brick in all(bricks) do
+		if brick.visible then
+			if collide(ball, brick) and first_hit then
+				if deflect_x(ball,brick) then
+					ball.dx = -ball.dx
+				else
+					ball.dy = -ball.dy
+				end
+				brick.visible = false
+				score += 10
+				sfx(3)
+				first_hit = false
+			else
+				cleared = false
+			end
+		end
+	end
+
+	if cleared then mode = "clear" end
 
 	-- collide ball with paddle
 	if collide(ball, paddle) then
@@ -115,31 +170,14 @@ function update_game()
 	prev_defl_x = deflect_x(ball, paddle)
 end
 
-function init_game()
-	prev_collided = false
-	prev_defl_x = false
-
-	max_lives = 4
-	lives = 4
-
-	score = 0
-
-	paddle = {}
-	paddle.w = 24
-	paddle.h = 3
-	paddle.x = 40
-	paddle.y = 120
-	paddle.dx = 0
-
-	ball = {}
-	ball.r = 2
-	ball.x = 2
-	ball.y = 40
-	ball.dx = 1
-	ball.dy = 1
-	ball.c = 11
-
-	mode = "game"
+function make_brick(x, y, w, h)
+	add(bricks, {
+		x = x,
+		y = y,
+		w = w,
+		h = h,
+		visible = true
+	})
 end
 
 function collide(ball, rect)
@@ -148,6 +186,7 @@ function collide(ball, rect)
 			or ball.y - (rect.y + rect.h) > ball.r + 1 
 			or rect.x - ball.x > ball.r + 2
 			or ball.x - (rect.x + rect.w) > ball.r + 1
+			-- or ball is exactly 1 px out from the 
 	)
 end
 
@@ -192,7 +231,15 @@ end
 
 function draw_over()
 	-- cls(3)
+	draw_game()
 	local str = "game over! press ❎ to retry"
+	print(str, 63 - (#str / 2) * 4, 60, 7)
+end
+
+function draw_clear()
+	-- cls(3)
+	draw_game()
+	local str = "you win! press ❎ to retry"
 	print(str, 63 - (#str / 2) * 4, 60, 7)
 end
 
@@ -207,8 +254,24 @@ function draw_game()
 	local str = "score:"..score
 	print(str, 126 - #str * 4, 3, 7)
 
-	rectfill(paddle.x, paddle.y, paddle.x + paddle.w, paddle.y + paddle.h, 7)
+	for brick in all(bricks) do
+		if brick.visible then
+			rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 1)
+			rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1, 14)
+		end
+	end
+
+	circfill(ball.x + 1, ball.y + 1, ball.r, 1)
 	circfill(ball.x, ball.y, ball.r, ball.c)
+	rectfill(paddle.x + 1, paddle.y + 1, paddle.x + paddle.w + 1, paddle.y + paddle.h + 1, 2)
+	rectfill(paddle.x, paddle.y, paddle.x + paddle.w, paddle.y + paddle.h, 7)
+end
+
+-->8
+-- utils
+
+function log(input)
+	printh("> " .. tostr(input))
 end
 
 __gfx__
@@ -219,9 +282,8 @@ __gfx__
 00077000088888800800008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00700700008888000080080000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000880000008800000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-__map__
-0000000000000000000000000000010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
 000100000b5500b550175000b50017500175001750017500175002350023500235002350023500235002350021500235002350023500235002350021500235002250020500225002250022500005000050000500
 000100001755017550175000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
-000100000444004440034000b40007400044500445004400014000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
+000100000443004430034000b40007400044400444004400014000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400004000040000400
+00030000006002664019630106200a620076100361000610016000060000600006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600006000060000600
