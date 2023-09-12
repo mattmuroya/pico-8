@@ -9,6 +9,7 @@ function _init()
 end
 
 function _update60()
+    if not btn(5) then btn_released = true end
     if mode == "start" then update_start() end
     if mode == "over" then update_over() end
     if mode == "clear" then update_over() end -- to-do: create clear screen update function
@@ -26,6 +27,9 @@ end
 -- update functions
 
 function init_game()
+    mode = "game"
+
+    btn_released = false
     prev_collided = false
     prev_defl_x = false
 
@@ -39,18 +43,17 @@ function init_game()
     paddle.x = 40
     paddle.y = 120
     paddle.dx = 0
+    paddle.sticky = true
 
     ball = {}
     ball.r = 2
-    ball.x = 2
-    ball.y = 80
     ball.dx = 1
-    ball.dy = 1
-    ball.c = 11
+    ball.dy = -1
+    reset_ball()
 
     bricks = {}	
 
-    for i = 0, 48 do
+    for i = 0, 34 do
         make_brick(
             1 + (i % 7) * 18, -- x
             20 + flr(i / 7) * 6, -- y
@@ -58,16 +61,14 @@ function init_game()
             4 -- h
         )
     end
-
-    mode = "game"
 end
 
 function update_start()
-    if btn(4) then init_game() end
+    if btn(5) then init_game() end
 end
 
 function update_over()
-    if btn(4) then init_game() end
+    if btn_released and btn(5) then init_game() end
 end
 
 function update_game()
@@ -77,15 +78,21 @@ function update_game()
 
     -- get input and set paddle speed
     if btn(0) and btn(1) then
-        if prev_dir == "l" then paddle.dx=3
-        elseif prev_dir == "r" then paddle.dx=-3
+        if prev_dir == "l" then
+            paddle.dx=3
+            if paddle.sticky then ball.dx = 1 end
+        elseif prev_dir == "r" then
+            paddle.dx=-3
+            if paddle.sticky then ball.dx = -1 end
         end
     elseif btn(0) then
         prev_dir = "l"
         paddle.dx=-3
+        if paddle.sticky then ball.dx = -1 end
     elseif btn(1) then
         prev_dir = "r"
         paddle.dx=3
+        if paddle.sticky then ball.dx = 1 end
     end
 
     -- move paddle
@@ -96,21 +103,39 @@ function update_game()
     if paddle.x + paddle.w > 127 then paddle.x = 127 - paddle.w end
 
     -- move ball
-    ball.x += ball.dx
-    ball.y += ball.dy
+    if btn_released and btn(5) then paddle.sticky = false end
+
+    if paddle.sticky then
+        ball.x = paddle.x + paddle.w / 2
+    else
+        ball.x += ball.dx
+        ball.y += ball.dy
+    end
 
     -- detect miss
     if ball.y + ball.r > 127 then
         lives -= 1
         sfx(2)
-        if lives == 0 then
-            mode = "over"
-        else
-            ball.x = 2
-            ball.y = 80
-            ball.dx = 1
-            ball.dy = 1
+        if lives == 0 then mode = "over"
+        else reset_ball()
         end
+    end
+    
+    -- collide ball with walls; reset position if out of bounds
+    if ball.x + ball.r > 127 then
+        ball.x = 127 - ball.r
+        ball.dx = -ball.dx
+        sfx(0)
+    end
+    if ball.x - ball.r < 0 then
+        ball.x = ball.r
+        ball.dx = -ball.dx
+        sfx(0)
+    end
+    if ball.y - ball.r <= 11  then
+        ball.y = ball.r + 11
+        ball.dy = -ball.dy
+        sfx(0)
     end
 
     -- collide ball with bricks
@@ -137,7 +162,7 @@ function update_game()
     if cleared then mode = "clear" end
 
     -- collide ball with paddle
-    if collide(ball, paddle) then
+    if collide(ball, paddle) and not paddle.sticky then
         if not prev_collided then
             if prev_defl_x then ball.dx = -ball.dx end
             ball.dy = -ball.dy
@@ -149,25 +174,19 @@ function update_game()
         prev_collided = false
     end
 
-    -- collide ball with walls; reset position if out of bounds
-    if ball.x + ball.r > 127 then
-        ball.x = 127 - ball.r
-        ball.dx = -ball.dx
-        sfx(0)
-    end
-    if ball.x - ball.r < 0 then
-        ball.x = ball.r
-        ball.dx = -ball.dx
-        sfx(0)
-    end
-    if ball.y - ball.r <= 11  then
-        ball.y = ball.r + 11
-        ball.dy = -ball.dy
-        sfx(0)
-    end
-
     -- calculate collision trajectory for next frame
     prev_defl_x = deflect_x(ball, paddle)
+
+    -- check if lanuch/start btn is being pressed
+    if btn(5) then btn_released = false end
+end
+
+function reset_ball()
+    ball.x = paddle.x + paddle.w / 2
+    ball.y = paddle.y - (ball.r + 1)
+    ball.dx = 1
+    ball.dy = -1
+    paddle.sticky = true
 end
 
 function make_brick(x, y, w, h)
@@ -254,15 +273,26 @@ function draw_game()
 
     for brick in all(bricks) do
         if brick.visible then
-            rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 1)
+            rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 2)
             rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1, 14)
         end
     end
 
     circfill(ball.x + 1, ball.y + 1, ball.r, 1)
-    circfill(ball.x, ball.y, ball.r, ball.c)
+    circfill(ball.x, ball.y, ball.r, 11)
+
+    if paddle.sticky then
+        line(
+            ball.x + ball.dx * 5,
+            ball.y + ball.dy * 5,
+            ball.x + ball.dx * 10,
+            ball.y + ball.dy * 10,
+            11
+        )
+    end
+
     rectfill(paddle.x + 1, paddle.y + 1, paddle.x + paddle.w + 1, paddle.y + paddle.h + 1, 2)
-    rectfill(paddle.x, paddle.y, paddle.x + paddle.w, paddle.y + paddle.h, 7)
+    rectfill(paddle.x, paddle.y, paddle.x + paddle.w, paddle.y + paddle.h, 6)
 end
 
 -->8
