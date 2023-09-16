@@ -68,7 +68,7 @@ function update_start()
 end
 
 function update_over()
-    if btn_released and btn(5) then init_game() end
+    if btn(5) then init_game() end
 end
 
 function update_game()
@@ -163,10 +163,17 @@ function update_game()
 
     -- collide ball with paddle
     if collide(ball, paddle) and not paddle.sticky then
-        if not prev_collided then
-            if prev_defl_x then ball.dx = -ball.dx end
-            ball.dy = -ball.dy
-            score += 1
+        if not prev_collided then        
+            if prev_defl_x then
+                ball.dy = -0.54
+                ball.dx = -1.31 * current_dir("x")
+            elseif ball.dx * paddle.dx > 0 then
+                lower_angle(ball)
+            elseif ball.dx * paddle.dx < 0 then
+                raise_angle(ball)
+            else
+                ball.dy = -ball.dy
+            end
             sfx(1)
         end
         prev_collided = true
@@ -237,6 +244,37 @@ function deflect_x(ball, rect)
         corner_dy = rect.y - ball.y
         return corner_dx < 0 and slope <= corner_dy / corner_dx
     end
+end
+
+function raise_angle(ball)
+    local x_dir = current_dir("x")
+    if ball.dy == 0.54 then
+        ball.dy = -1
+        ball.dx = 1 * x_dir
+    elseif ball.dy == 1 then
+        ball.dy = -1.31
+        ball.dx = 0.54 * x_dir
+    elseif ball.dy == 1.31 then
+        -- reverse when moving against ball at high angle
+        ball.dy = -ball.dy
+        ball.dx = -ball.dx
+    end
+end
+
+function lower_angle(ball)
+    local x_dir = current_dir("x")
+    if ball.dy == 1.31 then
+        ball.dy = -1
+        ball.dx = 1 * x_dir
+    elseif ball.dy == 1 then
+        ball.dy = -0.54
+        ball.dx = 1.31 * x_dir
+    end
+end
+
+function current_dir(axis)
+    if axis == "x" then return ball.dx / abs(ball.dx) end
+    if axis == "y" then return ball.dy / abs(ball.dy) end
 end
 
 -->8
