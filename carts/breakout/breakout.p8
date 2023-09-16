@@ -165,15 +165,14 @@ function update_game()
     if collide(ball, paddle) and not paddle.sticky then
         if not prev_collided then        
             if prev_defl_x then
-                ball.dy = -0.54
+                ball.dy = 0.54
                 ball.dx = -1.31 * current_dir("x")
             elseif ball.dx * paddle.dx > 0 then
                 lower_angle(ball)
             elseif ball.dx * paddle.dx < 0 then
                 raise_angle(ball)
-            else
-                ball.dy = -ball.dy
             end
+            ball.dy = -ball.dy
             sfx(1)
         end
         prev_collided = true
@@ -249,14 +248,13 @@ end
 function raise_angle(ball)
     local x_dir = current_dir("x")
     if ball.dy == 0.54 then
-        ball.dy = -1
+        ball.dy = 1
         ball.dx = 1 * x_dir
     elseif ball.dy == 1 then
-        ball.dy = -1.31
+        ball.dy = 1.31
         ball.dx = 0.54 * x_dir
     elseif ball.dy == 1.31 then
         -- reverse when moving against ball at high angle
-        ball.dy = -ball.dy
         ball.dx = -ball.dx
     end
 end
@@ -264,10 +262,10 @@ end
 function lower_angle(ball)
     local x_dir = current_dir("x")
     if ball.dy == 1.31 then
-        ball.dy = -1
+        ball.dy = 1
         ball.dx = 1 * x_dir
     elseif ball.dy == 1 then
-        ball.dy = -0.54
+        ball.dy = 0.54
         ball.dx = 1.31 * x_dir
     end
 end
