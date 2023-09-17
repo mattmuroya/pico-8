@@ -53,12 +53,12 @@ function init_game()
 
     bricks = {}	
 
-    for i = 0, 34 do
+    for i = 0, 39 do
         make_brick(
-            1 + (i % 7) * 18, -- x
-            20 + flr(i / 7) * 6, -- y
-            17, -- w
-            4 -- h
+            1 + (i % 8) * 14,
+            24 + flr(i / 8) * 6,
+            13,
+            4
         )
     end
 end
@@ -68,6 +68,8 @@ function update_start()
 end
 
 function update_over()
+    ball.dy = 0
+    ball.dx = 0
     if btn(5) then init_game() end
 end
 
@@ -149,10 +151,15 @@ function update_game()
                 else
                     ball.dy = -ball.dy
                 end
+                if multiplier == 0 then
+                    multiplier = 1
+                elseif multiplier < 8 then
+                    multiplier *= 2
+                end
+                score += 10 * (multiplier > 0 and multiplier or 1)
                 brick.visible = false
-                score += 10
-                sfx(3)
                 first_hit = false
+                sfx(3)
             else
                 cleared = false
             end
@@ -173,6 +180,7 @@ function update_game()
                 raise_angle(ball)
             end
             ball.dy = -ball.dy
+            multiplier = 0
             sfx(1)
         end
         prev_collided = true
@@ -193,6 +201,7 @@ function reset_ball()
     ball.dx = 1
     ball.dy = -1
     paddle.sticky = true
+    multiplier = 0
 end
 
 function make_brick(x, y, w, h)
@@ -304,8 +313,11 @@ function draw_game()
         spr(lives >= i and 1 or 2, 2 + (i - 1) * 9, 2)
     end
 
-    local str = "score:"..score
-    print(str, 126 - #str * 4, 3, 7)
+    local multiplier_str = "combo:"..(multiplier > 1 and multiplier.."x" or "--")
+    print(multiplier_str, (2 + 9 * max_lives) + 1, 3, 7)
+    
+    local score_str = "score:"..score
+    print(score_str, 126 - #score_str * 4, 3, 7)
 
     for brick in all(bricks) do
         if brick.visible then
