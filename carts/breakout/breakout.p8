@@ -5,17 +5,22 @@ __lua__
 
 function _init()
     mode = "start"
-    -- btn_released = false
     levels = {
+        -- brick types
+        --     - 0: space
+        --     - 1: basic
+        --     - 2: thicc bricc
+        --     - 3: indestructible (to-do)
+        --     - 4: exploding (to-do)
+        --     - 5: powerup (to-do)
+
         -- level 1
         {
-            -- {0,0,0,0,0,0,0,0,0},
-            -- {0,1,1,1,1,1,1,1,0},
-            -- {0,1,1,1,1,1,1,1,0},
-            -- {0,1,1,1,1,1,1,1,0},
-            -- {0,1,1,1,1,1,1,1,0},
-            -- {0,1,1,1,1,1,1,1,0},
-            {0,0,0,0,0,0,0,1,0}
+            {0,0,0,0,0,0,0,0,0},
+            {0,0,0,0,0,0,0,0,0},
+            {0,0,0,0,0,0,0,0,0},
+            {0,0,0,0,0,0,0,0,0},
+            {0,2,1,2,1,2,1,2,0},
         },
         -- level 2
         {
@@ -49,7 +54,6 @@ function _update60()
     if mode == "win" then update_win() end
     if mode == "over" then update_over() end
     if mode == "game" then update_game() end
-    -- btn_released = false
 end
 
 function _draw()
@@ -198,31 +202,24 @@ function update_game()
 
     -- collide ball with bricks
     local first_hit = true
-    local cleared = true
     for brick in all(bricks) do
-        if brick.visible then
-            if collide(ball, brick) and first_hit then
-                if deflect_x(ball,brick) then
-                    ball.dx = -ball.dx
-                else
-                    ball.dy = -ball.dy
-                end
-                if multiplier == 0 then
-                    multiplier = 1
-                elseif multiplier < 8 then
-                    multiplier *= 2
-                end
-                score += 10 * (multiplier > 0 and multiplier or 1)
-                brick.visible = false
-                first_hit = false
-                sfx(3)
-            else
-                cleared = false
+        if collide(ball, brick) and first_hit and brick.hp > 0 then
+            if deflect_x(ball,brick) then ball.dx = -ball.dx
+            else ball.dy = -ball.dy
             end
+
+            if multiplier == 0 then multiplier = 1
+            elseif multiplier < 8 then multiplier *= 2
+            end
+
+            score += 10 * (multiplier > 0 and multiplier or 1)
+            brick.hp -= 1
+            first_hit = false
+            sfx(3)
         end
     end
 
-    if cleared then
+    if level_clear() then
         level += 1
         mode = level > #levels and "win" or "clear"
     end
@@ -269,19 +266,19 @@ function build_level(level)
                 18 + (i - 1) * 6,
                 13,
                 4,
-                levels[level][i][j] == 1
+                levels[level][i][j] -- hp
             )
         end
     end
 end
 
-function make_brick(x, y, w, h, v)
+function make_brick(x, y, w, h, hp)
     add(bricks, {
         x = x,
         y = y,
         w = w,
         h = h,
-        visible = v
+        hp = hp or 0
     })
 end
 
@@ -293,6 +290,13 @@ function collide(ball, rect)
             or ball.x - (rect.x + rect.w) > ball.r + 1
             -- to-do: reject collision if ball at corner outside radius
     )
+end
+
+function level_clear()
+    for brick in all(bricks) do
+        if brick.hp > 0 then return false end
+    end
+    return true
 end
 
 function deflect_x(ball, rect)
@@ -396,9 +400,9 @@ function draw_game()
     print(score_str, 126 - #score_str * 4, 3, 7)
 
     for brick in all(bricks) do
-        if brick.visible then
-            rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 3)
-            rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1, 11)
+        if brick.hp > 0 then
+            rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 0)
+            rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1, brick.hp == 1 and 11 or 3)
         end
     end
 
