@@ -4,9 +4,8 @@ __lua__
 -- main loop
 
 function _init()
-    cls(1)
     mode = "start"
-
+    -- btn_released = false
     levels = {
         -- level 1
         {
@@ -20,23 +19,25 @@ function _init()
         },
         -- level 2
         {
-            {0,0,0,0,0,0,0,0,0},
-            {1,1,0,1,1,1,0,1,1},
-            {1,1,1,1,1,1,1,1,1},
-            {1,1,0,1,1,1,0,1,1},
-            {1,1,1,1,1,1,1,1,1},
-            {1,1,0,0,1,0,0,1,1},
+            -- {0,0,0,0,0,0,0,0,0},
+            -- {1,1,0,1,1,1,0,1,1},
+            -- {1,1,1,1,1,1,1,1,1},
+            -- {1,1,0,1,1,1,0,1,1},
+            -- {1,1,1,1,1,1,1,1,1},
+            -- {1,1,0,0,1,0,0,1,1},
+            {0,0,0,0,0,0,0,1,0}
         },
         -- level 3
         {
-            {0,1,0,0,0,0,0,1,0},
-            {0,0,1,0,0,0,1,0,0},
-            {0,0,1,1,1,1,1,0,0},
-            {0,1,1,0,1,0,1,1,0},
-            {1,1,1,1,1,1,1,1,1},
-            {1,0,1,1,1,1,1,0,1},
-            {1,0,1,0,0,0,1,0,1},   
-            {0,0,0,1,0,1,0,0,0},
+            -- {0,1,0,0,0,0,0,1,0},
+            -- {0,0,1,0,0,0,1,0,0},
+            -- {0,0,1,1,1,1,1,0,0},
+            -- {0,1,1,0,1,0,1,1,0},
+            -- {1,1,1,1,1,1,1,1,1},
+            -- {1,0,1,1,1,1,1,0,1},
+            -- {1,0,1,0,0,0,1,0,1},   
+            -- {0,0,0,1,0,1,0,0,0},
+            {0,0,0,0,0,0,0,1,0}
         }
     }
 end
@@ -44,15 +45,18 @@ end
 function _update60()
     if not btn(5) then btn_released = true end
     if mode == "start" then update_start() end
-    if mode == "over" then update_over() end
     if mode == "clear" then update_clear() end
+    if mode == "win" then update_win() end
+    if mode == "over" then update_over() end
     if mode == "game" then update_game() end
+    -- btn_released = false
 end
 
 function _draw()
     if mode == "start" then draw_start() end
-    if mode == "over" then draw_over() end
     if mode == "clear" then draw_clear() end
+    if mode == "win" then draw_win() end
+    if mode == "over" then draw_over() end
     if mode == "game" then draw_game() end
 end
 
@@ -62,7 +66,6 @@ end
 function init_game()
     mode = "game"
 
-    btn_released = false
     prev_collided = false
     prev_defl_x = false
 
@@ -90,22 +93,32 @@ function init_game()
 end
 
 function update_start()
-    if btn_released and btn(5) then init_game() end
-end
-
-function update_over()
-    ball.dy = 0
-    ball.dx = 0
-    if btn_released and btn(5) then init_game() end
+    cls(1)
+    if btn_released and btn(5) then
+        init_game()
+        btn_released = false
+    end
 end
 
 function update_clear()
-    ball.dy = 0
-    ball.dx = 0
     if btn_released and btn(5) then
-        build_level(level)
-        reset_ball()
         mode = "game"
+        btn_released = false
+        reset_ball()
+        build_level(level)
+    end
+end
+
+function update_win()
+    if btn_released and btn(5) then
+        mode = "start"
+        btn_released = false
+    end
+end
+
+function update_over()
+    if btn_released and btn(5) then
+        mode = "start"
         btn_released = false
     end
 end
@@ -210,8 +223,8 @@ function update_game()
     end
 
     if cleared then
-        mode = "clear"
         level += 1
+        mode = level > #levels and "win" or "clear"
     end
 
     -- collide ball with paddle
@@ -350,15 +363,21 @@ function draw_start()
     print(str, 63 - (#str / 2) * 4, 60, 7)
 end
 
-function draw_over()
-    draw_game()
-    local str = "game over! press ❎ to retry"
-    print(str, 63 - (#str / 2) * 4, 60, 7)
-end
-
 function draw_clear()
     draw_game()
     local str = "clear! press ❎ to continue"
+    print(str, 63 - (#str / 2) * 4, 60, 7)
+end
+
+function draw_win()
+    draw_game()
+    local str = "you win! play again? ❎"
+    print(str, 63 - (#str / 2) * 4, 60, 7)
+end
+
+function draw_over()
+    draw_game()
+    local str = "game over! try again? ❎"
     print(str, 63 - (#str / 2) * 4, 60, 7)
 end
 
