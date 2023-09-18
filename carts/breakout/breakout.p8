@@ -10,12 +10,13 @@ function _init()
     levels = {
         -- level 1
         {
-            {0,0,0,0,0,0,0,0,0},
-            {0,1,1,1,1,1,1,1,0},
-            {0,1,1,1,1,1,1,1,0},
-            {0,1,1,1,1,1,1,1,0},
-            {0,1,1,1,1,1,1,1,0},
-            {0,1,1,1,1,1,1,1,0},
+            -- {0,0,0,0,0,0,0,0,0},
+            -- {0,1,1,1,1,1,1,1,0},
+            -- {0,1,1,1,1,1,1,1,0},
+            -- {0,1,1,1,1,1,1,1,0},
+            -- {0,1,1,1,1,1,1,1,0},
+            -- {0,1,1,1,1,1,1,1,0},
+            {0,0,0,0,0,0,0,1,0}
         },
         -- level 2
         {
@@ -67,7 +68,7 @@ function init_game()
 
     score = 0
     max_lives = 4
-    lives = 4
+    lives = 2
 
     paddle = {}
     paddle.w = 24
@@ -137,11 +138,19 @@ function update_game()
     paddle.x += paddle.dx
 
     -- reset paddle if out of bounds
-    if paddle.x < 0 then paddle.x = 0 end
-    if paddle.x + paddle.w > 127 then paddle.x = 127 - paddle.w end
+    if paddle.x < 0 then
+        paddle.x = 0
+        paddle.dx = 0
+    elseif paddle.x + paddle.w > 127 then
+        paddle.x = 127 - paddle.w
+        paddle.dx = 0
+    end
 
     -- move ball
-    if btn_released and btn(5) then paddle.sticky = false end
+    if btn_released and btn(5) then
+        btn_released = false
+        paddle.sticky = false
+    end
 
     if paddle.sticky then
         ball.x = paddle.x + paddle.w / 2
@@ -164,13 +173,11 @@ function update_game()
         ball.x = 127 - ball.r
         ball.dx = -ball.dx
         sfx(0)
-    end
-    if ball.x - ball.r < 0 then
+    elseif ball.x - ball.r < 0 then
         ball.x = ball.r
         ball.dx = -ball.dx
         sfx(0)
-    end
-    if ball.y - ball.r <= 11  then
+    elseif ball.y - ball.r <= 11  then
         ball.y = ball.r + 11
         ball.dy = -ball.dy
         sfx(0)
@@ -229,9 +236,6 @@ function update_game()
 
     -- calculate collision trajectory for next frame
     prev_defl_x = deflect_x(ball, paddle)
-
-    -- check if lanuch/start btn is being pressed
-    if btn(5) then btn_released = false end
 end
 
 function reset_ball()
@@ -366,10 +370,10 @@ function draw_game()
         spr(lives >= i and 1 or 2, 2 + (i - 1) * 9, 2)
     end
 
-    local multiplier_str = "combo:"..(multiplier > 1 and multiplier.."x" or "--")
+    local multiplier_str = "combo:" .. (multiplier > 1 and multiplier .. "x" or "--")
     print(multiplier_str, (2 + 9 * max_lives) + 1, 3, 7)
     
-    local score_str = "score:"..score
+    local score_str = "score:" .. score
     print(score_str, 126 - #score_str * 4, 3, 7)
 
     for brick in all(bricks) do
