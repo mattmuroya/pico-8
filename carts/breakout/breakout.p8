@@ -4,15 +4,47 @@ __lua__
 -- main loop
 
 function _init()
-    cls()
+    cls(1)
     mode = "start"
+
+    levels = {
+        -- level 1
+        {
+            {0,0,0,0,0,0,0,0,0},
+            {0,1,1,1,1,1,1,1,0},
+            {0,1,1,1,1,1,1,1,0},
+            {0,1,1,1,1,1,1,1,0},
+            {0,1,1,1,1,1,1,1,0},
+            {0,1,1,1,1,1,1,1,0},
+        },
+        -- level 2
+        {
+            {0,0,0,0,0,0,0,0,0},
+            {1,1,0,1,1,1,0,1,1},
+            {1,1,1,1,1,1,1,1,1},
+            {1,1,0,1,1,1,0,1,1},
+            {1,1,1,1,1,1,1,1,1},
+            {1,1,0,0,1,0,0,1,1},
+        },
+        -- level 3
+        {
+            {0,1,0,0,0,0,0,1,0},
+            {0,0,1,0,0,0,1,0,0},
+            {0,0,1,1,1,1,1,0,0},
+            {0,1,1,0,1,0,1,1,0},
+            {1,1,1,1,1,1,1,1,1},
+            {1,0,1,1,1,1,1,0,1},
+            {1,0,1,0,0,0,1,0,1},   
+            {0,0,0,1,0,1,0,0,0},
+        }
+    }
 end
 
 function _update60()
     if not btn(5) then btn_released = true end
     if mode == "start" then update_start() end
     if mode == "over" then update_over() end
-    if mode == "clear" then update_over() end -- to-do: create clear screen update function
+    if mode == "clear" then update_clear() end
     if mode == "game" then update_game() end
 end
 
@@ -52,25 +84,29 @@ function init_game()
     reset_ball()
 
     bricks = {}	
-
-    for i = 0, 39 do
-        make_brick(
-            1 + (i % 8) * 14,
-            24 + flr(i / 8) * 6,
-            13,
-            4
-        )
-    end
+    level = 1
+    build_level(level)
 end
 
 function update_start()
-    if btn(5) then init_game() end
+    if btn_released and btn(5) then init_game() end
 end
 
 function update_over()
     ball.dy = 0
     ball.dx = 0
-    if btn(5) then init_game() end
+    if btn_released and btn(5) then init_game() end
+end
+
+function update_clear()
+    ball.dy = 0
+    ball.dx = 0
+    if btn_released and btn(5) then
+        build_level(level)
+        reset_ball()
+        mode = "game"
+        btn_released = false
+    end
 end
 
 function update_game()
@@ -166,7 +202,10 @@ function update_game()
         end
     end
 
-    if cleared then mode = "clear" end
+    if cleared then
+        mode = "clear"
+        level += 1
+    end
 
     -- collide ball with paddle
     if collide(ball, paddle) and not paddle.sticky then
@@ -204,13 +243,28 @@ function reset_ball()
     multiplier = 0
 end
 
-function make_brick(x, y, w, h)
+
+function build_level(level)
+    for i = 1, #levels[level] do
+        for j = 1, #levels[level][i] do
+            make_brick(
+                1 + (j - 1) % 9 * 14,
+                18 + (i - 1) * 6,
+                13,
+                4,
+                levels[level][i][j] == 1
+            )
+        end
+    end
+end
+
+function make_brick(x, y, w, h, v)
     add(bricks, {
         x = x,
         y = y,
         w = w,
         h = h,
-        visible = true
+        visible = v
     })
 end
 
@@ -288,7 +342,6 @@ end
 -- draw functions
 
 function draw_start()
-    cls(3)
     local str = "press ❎ to start"
     print(str, 63 - (#str / 2) * 4, 60, 7)
 end
@@ -301,12 +354,12 @@ end
 
 function draw_clear()
     draw_game()
-    local str = "you win! press ❎ to retry"
+    local str = "clear! press ❎ to continue"
     print(str, 63 - (#str / 2) * 4, 60, 7)
 end
 
 function draw_game()
-    cls(3)
+    cls(1)
     rectfill(0, 0, 127, 10, 0)
 
     for i = 1, max_lives do
@@ -321,12 +374,12 @@ function draw_game()
 
     for brick in all(bricks) do
         if brick.visible then
-            rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 2)
-            rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1, 14)
+            rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 3)
+            rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1, 11)
         end
     end
 
-    circfill(ball.x + 1, ball.y + 1, ball.r, 1)
+    circfill(ball.x + 1, ball.y + 1, ball.r, 3)
     circfill(ball.x, ball.y, ball.r, 11)
 
     if paddle.sticky then
