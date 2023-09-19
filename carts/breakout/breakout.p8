@@ -5,6 +5,13 @@ __lua__
 
 function _init()
     mode = "start"
+    brick_colors = {
+        b = 11,
+        t = 3,
+        i = 0,
+        -- x (exploding)
+        -- p = (powerup)
+    }
     levels = {
         -- level 1
         {
@@ -12,7 +19,7 @@ function _init()
             "         ",
             "         ",
             "         ",
-            "        t",
+            "i       t",
         },
         -- level 2
         {
@@ -189,22 +196,30 @@ function update_game()
     end
 
     -- collide ball with bricks
-    local first_hit = true
+    local first_hit = true -- to-do: is this actually doing anything?
     for brick in all(bricks) do
-        if collide(ball, brick) and first_hit and brick.hp > 0 then
+        if collide(ball, brick) and first_hit and brick.type ~= " " then
+            -- deflect ball
             if deflect_x(ball,brick) then ball.dx = -ball.dx
             else ball.dy = -ball.dy
             end
+            first_hit = false
+            sfx(3)
 
+            -- reactions
+            if brick.type == "i" then goto continue end
+            if brick.type == "b" then brick.type = " " end
+            if brick.type == "t" then brick.type = "b" end
+
+            -- update multiplier
             if multiplier == 0 then multiplier = 1
             elseif multiplier < 8 then multiplier *= 2
             end
 
+            -- update score
             score += 10 * (multiplier > 0 and multiplier or 1)
-            brick.hp -= 1
-            first_hit = false
-            sfx(3)
         end
+        ::continue::
     end
 
     if level_clear() then
@@ -268,10 +283,6 @@ function make_brick(x, y, w, h, type)
         h = h,
         type = type,
     }
-    brick.hp = type == "b" and 1
-        or type == "t" and 2
-        -- or type == "indestructible" and -1
-        or 0
     return brick
 end
 
@@ -287,7 +298,7 @@ end
 
 function level_clear()
     for brick in all(bricks) do
-        if brick.hp > 0 then return false end
+        if brick.type ~= " " and brick.type ~= "i" then return false end
     end
     return true
 end
@@ -393,9 +404,10 @@ function draw_game()
     print(score_str, 126 - #score_str * 4, 3, 7)
 
     for brick in all(bricks) do
-        if brick.hp > 0 then
+        if brick.type ~= " " then
             rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 0)
-            rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1, brick.hp == 1 and 11 or 3)
+            rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1,
+                brick_colors[brick.type])
         end
     end
 
