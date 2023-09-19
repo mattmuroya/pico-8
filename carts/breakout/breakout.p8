@@ -6,43 +6,32 @@ __lua__
 function _init()
     mode = "start"
     levels = {
-        -- brick types
-        --     - 0: space
-        --     - 1: basic
-        --     - 2: thicc bricc
-        --     - 3: indestructible (to-do)
-        --     - 4: exploding (to-do)
-        --     - 5: powerup (to-do)
-
         -- level 1
         {
-            {0,0,0,0,0,0,0,0,0},
-            {0,0,0,0,0,0,0,0,0},
-            {0,0,0,0,0,0,0,0,0},
-            {0,0,0,0,0,0,0,0,0},
-            {0,2,1,2,1,2,1,2,0},
+            "         ",
+            "         ",
+            "         ",
+            "         ",
+            "        t",
         },
         -- level 2
         {
-            -- {0,0,0,0,0,0,0,0,0},
-            -- {1,1,0,1,1,1,0,1,1},
-            -- {1,1,1,1,1,1,1,1,1},
-            -- {1,1,0,1,1,1,0,1,1},
-            -- {1,1,1,1,1,1,1,1,1},
-            -- {1,1,0,0,1,0,0,1,1},
-            {0,0,0,0,0,0,0,1,0}
+            "         ",
+            "         ",
+            "         ",
+            "         ",
+            "        t",
         },
         -- level 3
         {
-            -- {0,1,0,0,0,0,0,1,0},
-            -- {0,0,1,0,0,0,1,0,0},
-            -- {0,0,1,1,1,1,1,0,0},
-            -- {0,1,1,0,1,0,1,1,0},
-            -- {1,1,1,1,1,1,1,1,1},
-            -- {1,0,1,1,1,1,1,0,1},
-            -- {1,0,1,0,0,0,1,0,1},   
-            -- {0,0,0,1,0,1,0,0,0},
-            {0,0,0,0,0,0,0,1,0}
+            " b     b ",
+            "  b   b  ",
+            "  bbbbb  ",
+            " bb b bb ",
+            "bbbbbbbbb",
+            "b bbbbb b",
+            "b b   b b",
+            "   b b   ",
         }
     }
 end
@@ -91,9 +80,8 @@ function init_game()
     ball.dy = -1
     reset_ball()
 
-    bricks = {}	
     level = 1
-    build_level(level)
+    build(levels[level])
 end
 
 function update_start()
@@ -109,7 +97,7 @@ function update_clear()
         mode = "game"
         btn_released = false
         reset_ball()
-        build_level(level)
+        build(levels[level])
     end
 end
 
@@ -257,29 +245,34 @@ function reset_ball()
     multiplier = 0
 end
 
-
-function build_level(level)
-    for i = 1, #levels[level] do
-        for j = 1, #levels[level][i] do
-            make_brick(
+function build(level)
+    bricks = {}
+    for i = 1, #level do
+        for j = 1, #level[i] do
+            add(bricks, make_brick(
                 1 + (j - 1) % 9 * 14,
                 18 + (i - 1) * 6,
                 13,
                 4,
-                levels[level][i][j] -- hp
-            )
+                level[i][j]
+            ))
         end
     end
 end
 
-function make_brick(x, y, w, h, hp)
-    add(bricks, {
+function make_brick(x, y, w, h, type)
+    local brick = {
         x = x,
         y = y,
         w = w,
         h = h,
-        hp = hp or 0
-    })
+        type = type,
+    }
+    brick.hp = type == "b" and 1
+        or type == "t" and 2
+        -- or type == "indestructible" and -1
+        or 0
+    return brick
 end
 
 function collide(ball, rect)
