@@ -8,8 +8,8 @@ function _init()
     brick_colors = {
         b = 11,
         t = 3,
-        i = 0,
-        -- x (exploding)
+        i = 6,
+        x = 10
         -- p = (powerup)
     }
     levels = {
@@ -19,7 +19,7 @@ function _init()
             "         ",
             "         ",
             "         ",
-            "i       t",
+            "i  bxb  t",
         },
         -- level 2
         {
@@ -197,29 +197,38 @@ function update_game()
 
     -- collide ball with bricks
     local first_hit = true -- to-do: is this actually doing anything?
-    for brick in all(bricks) do
-        if collide(ball, brick) and first_hit and brick.type ~= " " then
-            -- deflect ball
-            if deflect_x(ball,brick) then ball.dx = -ball.dx
-            else ball.dy = -ball.dy
+    for i = 1, #bricks do
+        for j = 1, #bricks[i] do
+            local brick = bricks[i][j]
+            if collide(ball, brick) and first_hit and brick.type ~= " " then
+                -- deflect ball
+                if deflect_x(ball,brick) then ball.dx = -ball.dx
+                else ball.dy = -ball.dy
+                end
+                first_hit = false
+                sfx(3)
+
+                -- reactions
+                if brick.type == "i" then goto continue end
+                if brick.type == "b" then brick.type = " " end
+                if brick.type == "t" then brick.type = "b" end
+                if brick.type == "x" then
+                    brick.type = " " -- to-do: implement exploding bricks
+                    -- explode neighboring bricks as well
+                    -- bricks[i][j - 1].type = " "
+                    -- bricks[i][j + 1].type = " "
+                end
+
+                -- update multiplier
+                if multiplier == 0 then multiplier = 1
+                elseif multiplier < 8 then multiplier *= 2
+                end
+
+                -- update score
+                score += 10 * (multiplier > 0 and multiplier or 1)
             end
-            first_hit = false
-            sfx(3)
-
-            -- reactions
-            if brick.type == "i" then goto continue end
-            if brick.type == "b" then brick.type = " " end
-            if brick.type == "t" then brick.type = "b" end
-
-            -- update multiplier
-            if multiplier == 0 then multiplier = 1
-            elseif multiplier < 8 then multiplier *= 2
-            end
-
-            -- update score
-            score += 10 * (multiplier > 0 and multiplier or 1)
+            ::continue::
         end
-        ::continue::
     end
 
     if level_clear() then
@@ -263,8 +272,9 @@ end
 function build(level)
     bricks = {}
     for i = 1, #level do
+        add(bricks, {})
         for j = 1, #level[i] do
-            add(bricks, make_brick(
+            add(bricks[i], make_brick(
                 1 + (j - 1) % 9 * 14,
                 18 + (i - 1) * 6,
                 13,
@@ -297,8 +307,11 @@ function collide(ball, rect)
 end
 
 function level_clear()
-    for brick in all(bricks) do
-        if brick.type ~= " " and brick.type ~= "i" then return false end
+
+    for i = 1, #bricks do
+        for j = 1, #bricks[i] do
+            if bricks[i][j].type ~= " " and bricks[i][j].type ~= "i" then return false end
+        end
     end
     return true
 end
@@ -403,11 +416,14 @@ function draw_game()
     local score_str = "score:" .. score
     print(score_str, 126 - #score_str * 4, 3, 7)
 
-    for brick in all(bricks) do
-        if brick.type ~= " " then
-            rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 0)
-            rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1,
-                brick_colors[brick.type])
+    for i = 1, #bricks do
+        for j = 1, #bricks[i] do
+            if bricks[i][j].type ~= " " then
+                local brick = bricks[i][j]
+                rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 0)
+                rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1,
+                    brick_colors[brick.type])
+            end
         end
     end
 
