@@ -15,11 +15,11 @@ function _init()
     levels = {
         -- level 1
         {
-            "         ",
-            "         ",
-            "         ",
-            "         ",
-            "i  bxb  t",
+            " bbbbbbb ",
+            " bbbibbb ",
+            " bibbbbb ",
+            " xtttxtt ",
+            " bbtxbbi ",
         },
         -- level 2
         {
@@ -179,7 +179,7 @@ function update_game()
         else reset_ball()
         end
     end
-    
+
     -- collide ball with walls; reset position if out of bounds
     if ball.x + ball.r > 127 then
         ball.x = 127 - ball.r
@@ -200,34 +200,29 @@ function update_game()
     for i = 1, #bricks do
         for j = 1, #bricks[i] do
             local brick = bricks[i][j]
+
+            if brick.timer ~= nil then
+                if brick.timer <= 0 then
+                    react_to_hit(i, j)
+                    update_score()
+                    brick.timer = nil
+                else
+                    brick.timer -= 1
+                end
+            end
+
             if collide(ball, brick) and first_hit and brick.type ~= " " then
-                -- deflect ball
                 if deflect_x(ball,brick) then ball.dx = -ball.dx
                 else ball.dy = -ball.dy
                 end
                 first_hit = false
                 sfx(3)
-
-                -- reactions
-                if brick.type == "i" then goto continue end
-                if brick.type == "b" then brick.type = " " end
-                if brick.type == "t" then brick.type = "b" end
-                if brick.type == "x" then
-                    brick.type = " " -- to-do: implement exploding bricks
-                    -- explode neighboring bricks as well
-                    -- bricks[i][j - 1].type = " "
-                    -- bricks[i][j + 1].type = " "
+                react_to_hit(i, j)
+                if brick.type ~= "i" then
+                    update_multiplier()
+                    update_score()
                 end
-
-                -- update multiplier
-                if multiplier == 0 then multiplier = 1
-                elseif multiplier < 8 then multiplier *= 2
-                end
-
-                -- update score
-                score += 10 * (multiplier > 0 and multiplier or 1)
             end
-            ::continue::
         end
     end
 
@@ -306,14 +301,44 @@ function collide(ball, rect)
     )
 end
 
-function level_clear()
+function react_to_hit(i,j)
+    local brick = bricks[i][j]
+    if brick.type == "b" then brick.type = " "
+    elseif brick.type == "t" then brick.type = "b"
+    elseif brick.type == "x" then
+        brick.type = " " -- to-do: replace with explosion animation
+        set_timers_on_adj(i, j)
+    end
+end
 
+function set_timers_on_adj(i, j)
+    if i > 1 and reactive(bricks[i - 1][j].type) then bricks[i - 1][j].timer = 6 end
+    if i < #bricks and reactive(bricks[i + 1][j].type) then bricks[i + 1][j].timer = 6 end
+    if j > 1 and reactive(bricks[i][j -1].type) then bricks[i][j - 1].timer = 6 end
+    if j < #bricks[i] and reactive(bricks[i][j + 1].type) then bricks[i][j + 1].timer = 6 end
+end
+
+function update_multiplier()
+    if multiplier == 0 then multiplier = 1
+    elseif multiplier < 8 then multiplier *= 2
+    end
+end
+
+function update_score()
+    score += 10 * (multiplier > 0 and multiplier or 1)
+end
+
+function level_clear()
     for i = 1, #bricks do
         for j = 1, #bricks[i] do
-            if bricks[i][j].type ~= " " and bricks[i][j].type ~= "i" then return false end
+            if reactive(bricks[i][j].type) then return false end
         end
     end
     return true
+end
+
+function reactive(type)
+    return type ~= " " and type ~= "i"
 end
 
 function deflect_x(ball, rect)
