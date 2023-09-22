@@ -1,17 +1,32 @@
 pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
+
+-- to-dos
+
+-- powerups
+--   speed up
+--   multiball
+--   1up
+--   sticky paddle
+--   laser?
+--   megaball
+--   reduction
+--   expand
+
 -- main loop
 
 function _init()
     mode = "start"
+    
     brick_colors = {
         b = 11,
         t = 3,
         i = 6,
-        x = 10
-        -- p = (powerup)
+        x = 10,
+        p = 12
     }
+
     levels = {
         -- level 1
         {
@@ -19,7 +34,7 @@ function _init()
             " bbbibbb ",
             " bibbbbb ",
             " xtttxtt ",
-            " bbtxbbi ",
+            " pbtxpbi ",
         },
         -- level 2
         {
@@ -86,6 +101,8 @@ function init_game()
     ball.dx = 1
     ball.dy = -1
     reset_ball()
+
+    pills = {}
 
     level = 1
     build(levels[level])
@@ -169,6 +186,18 @@ function update_game()
     else
         ball.x += ball.dx
         ball.y += ball.dy
+    end
+
+    for pill in all(pills) do
+        pill.y += pill.dy
+        if collide(pill, paddle) then
+            log("caught powerup")
+            del(pills, pill)
+        end
+        if pill.y + pill.r >= 127 then
+            log("missed powerup")
+            del(pills, pill)
+        end
     end
 
     -- detect miss
@@ -305,10 +334,24 @@ function react_to_hit(i,j)
     local brick = bricks[i][j]
     if brick.type == "b" then brick.type = " "
     elseif brick.type == "t" then brick.type = "b"
+    elseif brick.type == "p" then
+        brick.type = " "
+        drop_pill(i, j)
     elseif brick.type == "x" then
         brick.type = " " -- to-do: replace with explosion animation
         set_timers_on_adj(i, j)
     end
+end
+
+function drop_pill(i, j)
+    local brick = bricks[i][j]
+    local pill = {
+        x = flr(brick.x + brick.w / 2),
+        y = brick.y + brick.h / 2,
+        dy = 0.75,
+        r = 2
+    }
+    add(pills, pill)
 end
 
 function set_timers_on_adj(i, j)
@@ -450,6 +493,11 @@ function draw_game()
                     brick_colors[brick.type])
             end
         end
+    end
+
+    for pill in all(pills) do
+        circfill(pill.x, pill.y, 2, 12)
+        print(pill.x.." "..pill.y)
     end
 
     circfill(ball.x + 1, ball.y + 1, ball.r, 3)
