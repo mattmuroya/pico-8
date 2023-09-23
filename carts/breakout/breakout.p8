@@ -5,14 +5,14 @@ __lua__
 -- to-dos
 
 -- powerups
---   speed up
---   multiball
---   1up
---   sticky paddle
---   laser?
---   megaball
---   reduction
---   expand
+--   s speed up ✅
+--   m multiball
+--   1 1up
+--   p sticky paddle
+--   l laser?
+--   g megaball
+--   r reduction
+--   e expand
 
 -- main loop
 
@@ -24,17 +24,20 @@ function _init()
         t = 3,
         i = 6,
         x = 10,
-        p = 12
     }
 
     levels = {
         -- level 1
         {
-            " bbbbbbb ",
-            " bbbibbb ",
-            " bibbbbb ",
-            " xtttxtt ",
-            " pbtxpbi ",
+            -- " bbbbbbb ",
+            -- " bbbibbb ",
+            -- " bibbbbb ",
+            -- " xtttxtt ",
+            -- " pbtxpbi ",
+            "         ",
+            "         ",
+            "         ",
+            " s1ps1ps "
         },
         -- level 2
         {
@@ -100,9 +103,6 @@ function init_game()
     ball.r = 2
     ball.dx = 1
     ball.dy = -1
-    reset_ball()
-
-    pills = {}
 
     level = 1
     build(levels[level])
@@ -120,7 +120,6 @@ function update_clear()
     if btn_released and btn(5) then
         mode = "game"
         btn_released = false
-        reset_ball()
         build(levels[level])
     end
 end
@@ -184,14 +183,29 @@ function update_game()
     if paddle.sticky then
         ball.x = paddle.x + paddle.w / 2
     else
-        ball.x += ball.dx
-        ball.y += ball.dy
+        ball.x += ball.dx * speed_multiplier.value
+        ball.y += ball.dy * speed_multiplier.value
     end
 
+    -- loop powerups
+    if speed_multiplier.duration <= 0 then speed_multiplier.value = 1
+    else speed_multiplier.duration -= 1
+    end
+
+
+    -- loop pills
     for pill in all(pills) do
         pill.y += pill.dy
         if collide(pill, paddle) then
-            log("caught powerup")
+            log("caught powerup: " .. pill.type)
+            if pill.type == "s" then
+                speed_multiplier.value = 1.5
+                speed_multiplier.duration = 300
+            elseif pill.type == "1" then
+                -- 1up
+            elseif pill.type == "p" then
+                -- sticky
+            end
             del(pills, pill)
         end
         if pill.y + pill.r >= 127 then
@@ -291,10 +305,20 @@ function reset_ball()
     ball.dy = -1
     paddle.sticky = true
     multiplier = 0
+    speed_multiplier.duration = 0
 end
 
 function build(level)
+    speed_multiplier = {
+        value = 1,
+        duration = 0,
+    }
+
+    reset_ball()
+
+    pills = {}
     bricks = {}
+
     for i = 1, #level do
         add(bricks, {})
         for j = 1, #level[i] do
@@ -334,31 +358,32 @@ function react_to_hit(i,j)
     local brick = bricks[i][j]
     if brick.type == "b" then brick.type = " "
     elseif brick.type == "t" then brick.type = "b"
-    elseif brick.type == "p" then
-        brick.type = " "
-        drop_pill(i, j)
     elseif brick.type == "x" then
-        brick.type = " " -- to-do: replace with explosion animation
         set_timers_on_adj(i, j)
+        brick.type = " " -- to-do: replace with explosion animation
+    elseif is_powerup(brick) then
+        drop_pill(i, j, brick.type)
+        brick.type = " "
     end
 end
 
-function drop_pill(i, j)
+function drop_pill(i, j, type)
     local brick = bricks[i][j]
     local pill = {
         x = flr(brick.x + brick.w / 2),
         y = brick.y + brick.h / 2,
         dy = 0.75,
-        r = 2
+        r = 2,
+        type = type
     }
     add(pills, pill)
 end
 
 function set_timers_on_adj(i, j)
-    if i > 1 and reactive(bricks[i - 1][j].type) then bricks[i - 1][j].timer = 6 end
-    if i < #bricks and reactive(bricks[i + 1][j].type) then bricks[i + 1][j].timer = 6 end
-    if j > 1 and reactive(bricks[i][j -1].type) then bricks[i][j - 1].timer = 6 end
-    if j < #bricks[i] and reactive(bricks[i][j + 1].type) then bricks[i][j + 1].timer = 6 end
+    if i > 1 and is_reactive(bricks[i - 1][j].type) then bricks[i - 1][j].timer = 6 end
+    if i < #bricks and is_reactive(bricks[i + 1][j].type) then bricks[i + 1][j].timer = 6 end
+    if j > 1 and is_reactive(bricks[i][j -1].type) then bricks[i][j - 1].timer = 6 end
+    if j < #bricks[i] and is_reactive(bricks[i][j + 1].type) then bricks[i][j + 1].timer = 6 end
 end
 
 function update_multiplier()
@@ -374,14 +399,20 @@ end
 function level_clear()
     for i = 1, #bricks do
         for j = 1, #bricks[i] do
-            if reactive(bricks[i][j].type) then return false end
+            if is_reactive(bricks[i][j].type) then return false end
         end
     end
     return true
 end
 
-function reactive(type)
+function is_reactive(type)
     return type ~= " " and type ~= "i"
+end
+
+function is_powerup(brick)
+    return brick.type == "s"
+        or brick.type == "1"
+        or brick.type == "p"
 end
 
 function deflect_x(ball, rect)
@@ -490,14 +521,13 @@ function draw_game()
                 local brick = bricks[i][j]
                 rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 0)
                 rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1,
-                    brick_colors[brick.type])
+                    is_powerup(brick) and 12 or brick_colors[brick.type])
             end
         end
     end
 
     for pill in all(pills) do
         circfill(pill.x, pill.y, 2, 12)
-        print(pill.x.." "..pill.y)
     end
 
     circfill(ball.x + 1, ball.y + 1, ball.r, 3)
