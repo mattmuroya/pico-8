@@ -5,14 +5,12 @@ __lua__
 -- to-dos
 
 -- powerups
---   s speed up ✅
---   m multiball
---   1 1up
---   p sticky paddle
---   l laser?
---   g megaball
---   r reduction
---   e expand
+--   s speed up ❎
+--   1 1up ❎
+--   3 multiball
+--   m megaball
+--   r reduce ❎
+--   e expand ❎
 
 -- main loop
 
@@ -35,9 +33,9 @@ function _init()
             -- " xtttxtt ",
             -- " pbtxpbi ",
             "         ",
-            "         ",
-            "         ",
-            " s1ps1ps "
+            " bbb bbb  ",
+            " 111 sss ",
+            " eee rrr "
         },
         -- level 2
         {
@@ -88,8 +86,7 @@ function init_game()
     prev_defl_x = false
 
     score = 0
-    max_lives = 4
-    lives = 2
+    lives = 4
 
     paddle = {}
     paddle.w = 24
@@ -139,6 +136,19 @@ function update_over()
 end
 
 function update_game()
+    -- loop timed powerups
+    paddle.w = 24
+    if speed_up_duration > 0 then speed_up_duration -= 1 end
+    if expand_duration > 0 then
+    log(expand_duration)
+        paddle.w = 48
+        expand_duration -= 1
+    end
+    if reduce_duration > 0 then
+        paddle.w = 12
+        reduce_duration -= 1
+    end
+
     -- dampen paddle speed
     paddle.dx *= 0.6
     if abs(paddle.dx) < 0.5 then paddle.dx = 0 end
@@ -183,15 +193,9 @@ function update_game()
     if paddle.sticky then
         ball.x = paddle.x + paddle.w / 2
     else
-        ball.x += ball.dx * speed_multiplier.value
-        ball.y += ball.dy * speed_multiplier.value
+        ball.x += ball.dx * (speed_up_duration > 0 and 1.5 or 1)
+        ball.y += ball.dy * (speed_up_duration > 0 and 1.5 or 1)
     end
-
-    -- loop powerups
-    if speed_multiplier.duration <= 0 then speed_multiplier.value = 1
-    else speed_multiplier.duration -= 1
-    end
-
 
     -- loop pills
     for pill in all(pills) do
@@ -199,12 +203,20 @@ function update_game()
         if collide(pill, paddle) then
             log("caught powerup: " .. pill.type)
             if pill.type == "s" then
-                speed_multiplier.value = 1.5
-                speed_multiplier.duration = 300
+                speed_up_duration = 300
             elseif pill.type == "1" then
-                -- 1up
-            elseif pill.type == "p" then
-                -- sticky
+                lives += 1
+            elseif pill.type == "3" then
+                -- multiball
+            elseif pill.type == "m" then
+                -- megaball
+            elseif pill.type == "r" then
+                reduce_duration = 300
+                expand_duration = 0
+            elseif pill.type == "e" then
+            log('expand')
+                expand_duration = 300
+                reduce_duration = 0
             end
             del(pills, pill)
         end
@@ -305,14 +317,14 @@ function reset_ball()
     ball.dy = -1
     paddle.sticky = true
     multiplier = 0
-    speed_multiplier.duration = 0
+    speed_up_duration = 0
 end
 
 function build(level)
-    speed_multiplier = {
-        value = 1,
-        duration = 0,
-    }
+    speed_up_duration = 0
+    expand_duration = 0
+    reduce_duration = 0
+    megaball_duration = 0
 
     reset_ball()
 
@@ -387,8 +399,8 @@ function set_timers_on_adj(i, j)
 end
 
 function update_multiplier()
-    if multiplier == 0 then multiplier = 1
-    elseif multiplier < 8 then multiplier *= 2
+    if multiplier == 0 then multiplier = 1 * (reduce_duration > 0 and 2 or 1)
+    elseif multiplier < 8 then multiplier *= 2 * (reduce_duration > 0 and 2 or 1)
     end
 end
 
@@ -412,7 +424,10 @@ end
 function is_powerup(brick)
     return brick.type == "s"
         or brick.type == "1"
-        or brick.type == "p"
+        or brick.type == "3"
+        or brick.type == "m"
+        or brick.type == "r"
+        or brick.type == "e"
 end
 
 function deflect_x(ball, rect)
@@ -505,12 +520,13 @@ function draw_game()
     cls(1)
     rectfill(0, 0, 127, 10, 0)
 
-    for i = 1, max_lives do
-        spr(lives >= i and 1 or 2, 2 + (i - 1) * 9, 2)
-    end
+    -- for i = 1, max_lives do
+    --     spr(lives >= i and 1 or 2, 2 + (i - 1) * 9, 2)
+    -- end
+    print("lives:" .. lives, 2, 3, 7)
 
     local multiplier_str = "combo:" .. (multiplier > 1 and multiplier .. "x" or "--")
-    print(multiplier_str, (2 + 9 * max_lives) + 1, 3, 7)
+    print(multiplier_str, (63 - #multiplier_str * 4 / 2), 3, 7)
     
     local score_str = "score:" .. score
     print(score_str, 126 - #score_str * 4, 3, 7)
