@@ -1,14 +1,13 @@
 pico-8 cartridge // http://www.pico-8.com
 version 41
 __lua__
-
 -- to-dos
 
 -- powerups
 --   s speed up ❎
 --   1 1up ❎
 --   3 multiball
---   m megaball
+--   m megaball ❎
 --   r reduce ❎
 --   e expand ❎
 
@@ -16,27 +15,17 @@ __lua__
 
 function _init()
     mode = "start"
-    
-    brick_colors = {
-        b = 11,
-        t = 3,
-        i = 6,
-        x = 10,
-    }
-
+    score = 0
+    lives = 4
+    level = 1
     levels = {
         -- level 1
         {
-            -- " bbbbbbb ",
-            -- " bbbibbb ",
-            -- " bibbbbb ",
-            -- " xtttxtt ",
-            -- " pbtxpbi ",
             "         ",
-            " bbbbbbb ",
+            " ixtbtxi ",
             " bbbbbbb ",
             " 111bsss ",
-            " bbbmbbb "
+            " txbmbxt "
         },
         -- level 2
         {
@@ -79,37 +68,11 @@ end
 
 -->8
 -- update functions
-
-function init_game()
-    mode = "game"
-
-    prev_collided = false
-    prev_defl_x = false
-
-    score = 0
-    lives = 4
-
-    paddle = {}
-    paddle.w = 24
-    paddle.h = 3
-    paddle.x = 40
-    paddle.y = 120
-    paddle.dx = 0
-    paddle.sticky = true
-
-    ball = {}
-    ball.r = 2
-    ball.dx = 1
-    ball.dy = -1
-
-    level = 1
-    build(levels[level])
-end
-
 function update_start()
     cls(1)
     if btn_released and btn(5) then
-        init_game()
+        mode = "game"
+        build(levels[level])
         btn_released = false
     end
 end
@@ -117,8 +80,8 @@ end
 function update_clear()
     if btn_released and btn(5) then
         mode = "game"
-        btn_released = false
         build(levels[level])
+        btn_released = false
     end
 end
 
@@ -200,9 +163,8 @@ function update_game()
 
     -- loop pills
     for pill in all(pills) do
-        pill.y += pill.dy
+        pill.y += 0.75
         if collide(pill, paddle) then
-            log("caught powerup: " .. pill.type)
             if pill.type == "s" then
                 speed_up_duration = 300
             elseif pill.type == "1" then
@@ -231,7 +193,9 @@ function update_game()
     if ball.y + ball.r > 127 then
         lives -= 1
         sfx(2)
-        if lives == 0 then mode = "over"
+        if lives < 0 then
+            lives = 0
+            mode = "over"
         else reset_ball()
         end
     end
@@ -252,7 +216,7 @@ function update_game()
     end
 
     -- collide ball with bricks
-    local first_hit = true -- to-do: is this actually doing anything?
+    local first_hit = true
     for i = 1, #bricks do
         for j = 1, #bricks[i] do
             local brick = bricks[i][j]
@@ -324,6 +288,22 @@ function reset_ball()
 end
 
 function build(level)
+    prev_collided = false
+    prev_defl_x = false
+
+    paddle = {}
+    paddle.w = 24
+    paddle.h = 3
+    paddle.x = 40
+    paddle.y = 120
+    paddle.dx = 0
+    paddle.sticky = true
+
+    ball = {}
+    ball.r = 2
+    ball.dx = 1
+    ball.dy = -1
+
     speed_up_duration = 0
     expand_duration = 0
     reduce_duration = 0
@@ -387,7 +367,6 @@ function drop_pill(i, j, type)
     local pill = {
         x = flr(brick.x + brick.w / 2),
         y = brick.y + brick.h / 2,
-        dy = 0.75,
         r = 2,
         type = type
     }
@@ -523,9 +502,6 @@ function draw_game()
     cls(1)
     rectfill(0, 0, 127, 10, 0)
 
-    -- for i = 1, max_lives do
-    --     spr(lives >= i and 1 or 2, 2 + (i - 1) * 9, 2)
-    -- end
     print("lives:" .. lives, 2, 3, 7)
 
     local multiplier_str = "combo:" .. (multiplier > 1 and multiplier .. "x" or "--")
@@ -540,7 +516,11 @@ function draw_game()
                 local brick = bricks[i][j]
                 rectfill(brick.x+1, brick.y+1, brick.x + brick.w, brick.y + brick.h, 0)
                 rectfill(brick.x, brick.y, brick.x + brick.w - 1, brick.y + brick.h - 1,
-                    is_powerup(brick) and 12 or brick_colors[brick.type])
+                    brick.type == "b" and 11
+                        or brick.type == "t" and 3
+                        or brick.type == "i" and 6
+                        or brick.type == "x" and 10
+                        or 12)
             end
         end
     end
