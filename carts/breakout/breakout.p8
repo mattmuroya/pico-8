@@ -33,9 +33,10 @@ function _init()
             -- " xtttxtt ",
             -- " pbtxpbi ",
             "         ",
-            " bbb bbb  ",
-            " 111 sss ",
-            " eee rrr "
+            " bbbbbbb ",
+            " bbbbbbb ",
+            " 111bsss ",
+            " bbbmbbb "
         },
         -- level 2
         {
@@ -139,8 +140,8 @@ function update_game()
     -- loop timed powerups
     paddle.w = 24
     if speed_up_duration > 0 then speed_up_duration -= 1 end
+    if megaball_duration > 0 then megaball_duration -= 1 end
     if expand_duration > 0 then
-    log(expand_duration)
         paddle.w = 48
         expand_duration -= 1
     end
@@ -209,7 +210,7 @@ function update_game()
             elseif pill.type == "3" then
                 -- multiball
             elseif pill.type == "m" then
-                -- megaball
+                megaball_duration = 300
             elseif pill.type == "r" then
                 reduce_duration = 300
                 expand_duration = 0
@@ -267,8 +268,10 @@ function update_game()
             end
 
             if collide(ball, brick) and first_hit and brick.type ~= " " then
-                if deflect_x(ball,brick) then ball.dx = -ball.dx
-                else ball.dy = -ball.dy
+                if megaball_duration <= 0 then
+                    if deflect_x(ball,brick) then ball.dx = -ball.dx
+                    else ball.dy = -ball.dy
+                    end
                 end
                 first_hit = false
                 sfx(3)
