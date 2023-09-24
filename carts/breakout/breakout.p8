@@ -232,7 +232,7 @@ function update_game()
             end
 
             if collide(ball, brick) and first_hit and brick.type ~= " " then
-                if megaball_duration <= 0 then
+                if megaball_duration <= 0 or brick.type == "i" then
                     if deflect_x(ball,brick) then ball.dx = -ball.dx
                     else ball.dy = -ball.dy
                     end
