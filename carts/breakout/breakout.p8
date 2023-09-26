@@ -20,9 +20,9 @@ function _init()
         {
             "         ",
             " ixtbtxi ",
-            " bbbbbbb ",
-            " 111bsss ",
-            " txbmbxt "
+            " bb333bb ",
+            "         ",
+            "         "
         },
         -- level 2
         {
@@ -122,19 +122,19 @@ function update_game()
     if btn(0) and btn(1) then
         if prev_dir == "l" then
             paddle.dx = 3
-            if paddle.sticky then ball.dx = 1 end
+            if paddle.sticky then balls[1].dx = 1 end
         elseif prev_dir == "r" then
             paddle.dx = -3
-            if paddle.sticky then ball.dx = -1 end
+            if paddle.sticky then balls[1].dx = -1 end
         end
     elseif btn(0) then
         prev_dir = "l"
         paddle.dx = -3
-        if paddle.sticky then ball.dx = -1 end
+        if paddle.sticky then balls[1].dx = -1 end
     elseif btn(1) then
         prev_dir = "r"
         paddle.dx = 3
-        if paddle.sticky then ball.dx = 1 end
+        if paddle.sticky then balls[1].dx = 1 end
     end
 
     -- move paddle
@@ -156,10 +156,12 @@ function update_game()
     end
 
     if paddle.sticky then
-        ball.x = paddle.x + paddle.w / 2
+        balls[1].x = paddle.x + paddle.w / 2
     else
-        ball.x += ball.dx * (speed_up_duration > 0 and 1.5 or 1)
-        ball.y += ball.dy * (speed_up_duration > 0 and 1.5 or 1)
+        for ball in all(balls) do
+            ball.x += ball.dx * (speed_up_duration > 0 and 1.5 or 1)
+            ball.y += ball.dy * (speed_up_duration > 0 and 1.5 or 1)
+        end
     end
 
     -- loop pills
@@ -171,82 +173,98 @@ function update_game()
             elseif pill.type == "1" then
                 lives += 1
             elseif pill.type == "3" then
-                -- multiball
+                for i = 1, #balls do
+                    local b1, b2
+                    -- if balls[i].y < 0 then -- moving up
+                        lower_angle(balls[i])
+                        b1 = make_ball(balls[i].x, balls[i].y, balls[i].dx, balls[i].dy)
+                        raise_angle(b1)
+                        b2 = make_ball(b1.x, b1.y, b1.dx, b1.dy)
+                        raise_angle(b2)
+                    -- elseif balls[i] > 0 then -- moving down
+                        -- lower an
+                    -- end
+                    add(balls, b1)
+                    add(balls, b2)
+                end
             elseif pill.type == "m" then
                 megaball_duration = 300
             elseif pill.type == "r" then
                 reduce_duration = 300
                 expand_duration = 0
             elseif pill.type == "e" then
-                log('expand')
                 expand_duration = 300
                 reduce_duration = 0
             end
             del(pills, pill)
         end
         if pill.y + pill.r >= 127 then
-            log("missed powerup")
             del(pills, pill)
         end
     end
 
     -- detect miss
-    if ball.y + ball.r > 127 then
-        lives -= 1
-        sfx(2)
-        if lives < 0 then
-            lives = 0
-            mode = "over"
-        else
-            reset_ball()
+    for ball in all(balls) do
+        if ball.y + ball.r > 127 then
+            sfx(2)
+            del(balls, ball)
         end
     end
 
-    -- collide ball with walls; reset position if out of bounds
-    if ball.x + ball.r > 127 then
-        ball.x = 127 - ball.r
-        ball.dx = -ball.dx
-        sfx(0)
-    elseif ball.x - ball.r < 0 then
-        ball.x = ball.r
-        ball.dx = -ball.dx
-        sfx(0)
-    elseif ball.y - ball.r <= 11 then
-        ball.y = ball.r + 11
-        ball.dy = -ball.dy
-        sfx(0)
+    -- if miss all
+    if #balls == 0 then
+        lives -= 1
+        add(balls, make_ball(paddle.x + paddle.w / 2, paddle.y - 2 - 1, 1, -1))
+        paddle.sticky = true
+        multiplier = 0
     end
 
-    -- collide ball with bricks
-    local first_hit = true
-    for i = 1, #bricks do
-        for j = 1, #bricks[i] do
-            local brick = bricks[i][j]
+    -- collide ball with walls; reset position if out of bounds
+    for ball in all(balls) do
+        if ball.x + ball.r > 127 then
+            ball.x = 127 - ball.r
+            ball.dx = -ball.dx
+            sfx(0)
+        elseif ball.x - ball.r < 0 then
+            ball.x = ball.r
+            ball.dx = -ball.dx
+            sfx(0)
+        elseif ball.y - ball.r <= 11 then
+            ball.y = ball.r + 11
+            ball.dy = -ball.dy
+            sfx(0)
+        end
 
-            if brick.timer ~= nil then
-                if brick.timer <= 0 then
-                    react_to_hit(i, j)
-                    update_score()
-                    brick.timer = nil
-                else
-                    brick.timer -= 1
-                end
-            end
-
-            if collide(ball, brick) and first_hit and brick.type ~= " " then
-                if megaball_duration <= 0 or brick.type == "i" then
-                    if deflect_x(ball, brick) then
-                        ball.dx = -ball.dx
+        -- collide ball with bricks
+        ball.first_hit = true
+        for i = 1, #bricks do
+            for j = 1, #bricks[i] do
+                local brick = bricks[i][j]
+                if brick.timer ~= nil then
+                    if brick.timer <= 0 then
+                        react_to_hit(i, j)
+                        update_score()
+                        brick.timer = nil
                     else
-                        ball.dy = -ball.dy
+                        brick.timer -= 1
                     end
                 end
-                first_hit = false
-                sfx(3)
-                react_to_hit(i, j)
-                if brick.type ~= "i" then
-                    update_multiplier()
-                    update_score()
+
+                if collide(ball, brick) and ball.first_hit and brick.type ~= " " then
+                    if megaball_duration <= 0 or brick.type == "i" then
+                        if deflect_x(ball, brick) then
+                            ball.dx = -ball.dx
+                        else
+                            ball.dy = -ball.dy
+                        end
+                    end
+                    ball.first_hit = false
+                    sfx(3)
+                    react_to_hit(i, j)
+                    if brick.type ~= "i" then
+                        update_multiplier()
+                        update_score()
+                    end
                 end
             end
         end
@@ -258,43 +276,43 @@ function update_game()
     end
 
     -- collide ball with paddle
-    if collide(ball, paddle) and not paddle.sticky then
-        if not prev_collided then
-            if prev_defl_x then
-                ball.dy = 0.54
-                ball.dx = -1.31 * current_dir("x")
-            elseif ball.dx * paddle.dx > 0 then
-                lower_angle(ball)
-            elseif ball.dx * paddle.dx < 0 then
-                raise_angle(ball)
+    for ball in all(balls) do
+        if collide(ball, paddle) and not paddle.sticky then
+            if not ball.prev_collided then
+                ball.dy = -ball.dy
+                if ball.prev_defl_x then
+                    ball.dy = -0.54
+                    ball.dx = -1.31 * x_dir(ball)
+                elseif ball.dx * paddle.dx > 0 then
+                    lower_angle(ball)
+                elseif ball.dx * paddle.dx < 0 then
+                    raise_angle(ball)
+                end
+                multiplier = 0
+                sfx(1)
             end
-            ball.dy = -ball.dy
-            multiplier = 0
-            sfx(1)
+            ball.prev_collided = true
+        else
+            ball.prev_collided = false
         end
-        prev_collided = true
-    else
-        prev_collided = false
+        -- calculate collision trajectory for next frame
+        ball.prev_defl_x = deflect_x(ball, paddle)
     end
-
-    -- calculate collision trajectory for next frame
-    prev_defl_x = deflect_x(ball, paddle)
 end
 
-function reset_ball()
-    ball.x = paddle.x + paddle.w / 2
-    ball.y = paddle.y - (ball.r + 1)
-    ball.dx = 1
-    ball.dy = -1
-    paddle.sticky = true
-    multiplier = 0
-    speed_up_duration = 0
+function make_ball(x, y, dx, dy)
+
+    return {
+        r = 2,
+        dx = dx,
+        dy = dy,
+        x = x,
+        y = y,
+        first_hit = true,
+    }
 end
 
 function build(level)
-    prev_collided = false
-    prev_defl_x = false
-
     paddle = {}
     paddle.w = 24
     paddle.h = 3
@@ -303,17 +321,16 @@ function build(level)
     paddle.dx = 0
     paddle.sticky = true
 
-    ball = {}
-    ball.r = 2
-    ball.dx = 1
-    ball.dy = -1
+    balls = {}
+
+    add(balls, make_ball(paddle.x + paddle.w / 2, paddle.y - 2 - 1, 1, -1))
+
+    multiplier = 0
 
     speed_up_duration = 0
     expand_duration = 0
     reduce_duration = 0
     megaball_duration = 0
-
-    reset_ball()
 
     pills = {}
     bricks = {}
@@ -453,33 +470,37 @@ function deflect_x(ball, rect)
 end
 
 function raise_angle(ball)
-    local x_dir = current_dir("x")
-    if ball.dy == 0.54 then
-        ball.dy = 1
+    local x_dir = x_dir(ball)
+    local y_dir = y_dir(ball)
+    if -abs(ball.dy) == -0.54 then
+        ball.dy = 1 * y_dir
         ball.dx = 1 * x_dir
-    elseif ball.dy == 1 then
-        ball.dy = 1.31
+    elseif -abs(ball.dy) == -1 then
+        ball.dy = 1.31 * y_dir
         ball.dx = 0.54 * x_dir
-    elseif ball.dy == 1.31 then
-        -- reverse when moving against ball at high angle
+    elseif ball.dy == -1.31 then
         ball.dx = -ball.dx
     end
 end
 
 function lower_angle(ball)
-    local x_dir = current_dir("x")
-    if ball.dy == 1.31 then
-        ball.dy = 1
+    local x_dir = x_dir(ball)
+    local y_dir = y_dir(ball)
+    if -abs(ball.dy) == -1.31 then
+        ball.dy = 1 * y_dir
         ball.dx = 1 * x_dir
-    elseif ball.dy == 1 then
-        ball.dy = 0.54
+    elseif -abs(ball.dy) == -1 then
+        ball.dy = 0.54 * y_dir
         ball.dx = 1.31 * x_dir
     end
 end
 
-function current_dir(axis)
-    if axis == "x" then return ball.dx / abs(ball.dx) end
-    if axis == "y" then return ball.dy / abs(ball.dy) end
+function x_dir(ball)
+    return ball.dx / abs(ball.dx)
+end
+
+function y_dir(ball)
+    return ball.dy / abs(ball.dy)
 end
 
 -->8
@@ -541,15 +562,17 @@ function draw_game()
         circfill(pill.x, pill.y, 2, 12)
     end
 
-    circfill(ball.x + 1, ball.y + 1, ball.r, 3)
-    circfill(ball.x, ball.y, ball.r, 11)
-
+    for ball in all(balls) do
+        circfill(ball.x + 1, ball.y + 1, ball.r, 3)
+        circfill(ball.x, ball.y, ball.r)
+    end
+    
     if paddle.sticky then
         line(
-            ball.x + ball.dx * 5,
-            ball.y + ball.dy * 5,
-            ball.x + ball.dx * 10,
-            ball.y + ball.dy * 10,
+            balls[1].x + balls[1].dx * 5,
+            balls[1].y + balls[1].dy * 5,
+            balls[1].x + balls[1].dx * 10,
+            balls[1].y + balls[1].dy * 10,
             11
         )
     end
