@@ -564,7 +564,7 @@ function draw_game()
 
     for ball in all(balls) do
         circfill(ball.x + 1, ball.y + 1, ball.r, 3)
-        circfill(ball.x, ball.y, ball.r)
+        circfill(ball.x, ball.y, ball.r, 11)
     end
     
     if paddle.sticky then
