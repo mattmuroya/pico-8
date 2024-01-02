@@ -4,7 +4,7 @@ __lua__
 -- a breakdown/study of selfsame's ECS framework on lexaloffle
 -- https://www.lexalofflentity.com/bbs/?tid=30039
 
- -- main loop
+-- main loop
 
 function _init()
     world = {}
