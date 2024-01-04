@@ -7,6 +7,11 @@ __lua__
 -- main loop
 
 function _init()
+    starfield = {}
+    for i = 1, 100 do
+        add(starfield, mk_star(flr(rnd(128)), flr(rnd(128))))
+    end
+
     ships = {}
     add(ships, mk_ship(64,64))
 end
@@ -15,11 +20,13 @@ function _update()
     reset_ship(ships)
     get_player_input(ships)
     move_entities(ships)
+    move_entities(starfield)
 end
 
 function _draw()
     cls()
-    draw_ship(ships)
+    draw_starfield(starfield)
+    draw_ships(ships)
 end
 
 -->8
@@ -69,6 +76,20 @@ function mk_ship(x, y)
     }
 end
 
+function mk_star(x, y)
+    return {
+        type = "star",
+        position = {
+            x = x,
+            y = y
+        },
+        direction = {
+            dx = 0,
+            dy = rnd(1.5) + 0.5 -- random y speed
+        }
+    }
+end
+
 -->8
 -- systems
 
@@ -85,7 +106,7 @@ reset_ship = system({},
 get_player_input = system({},
     function(e)
         if btn(0) and btn(1) then
-            if btn_0_was_last then e.direction.dx += 2
+            if btn_0_was_last then e.direction.dx += e.speed
             else e.direction.dx -= e.speed
             end
         elseif btn(0) then 
@@ -99,8 +120,8 @@ get_player_input = system({},
         end
 
         if btn(2) and btn(3) then
-            if btn_2_was_last then e.direction.dy += 2
-            else e.direction.dy -= e.speeed
+            if btn_2_was_last then e.direction.dy += e.speed
+            else e.direction.dy -= e.speed
             end
         elseif btn(2) then 
             btn_2_was_last = true
@@ -117,20 +138,41 @@ move_entities = system({"direction"},
     function(e)
         e.position.x += e.direction.dx
         e.position.y += e.direction.dy
+
         if e.type == "ship" then
             if e.position.x >= 124 then e.position.x = 124 end
             if e.position.x <= 4 then e.position.x = 4 end
             if e.position.y >= 124 then e.position.y = 124 end
             if e.position.y <= 4 then e.position.y = 4 end
         end
+
+        if e.type == "star" then
+            if e.position.y >= 128 then
+                -- e.position.y = 0
+                del(starfield, e)
+                add(starfield, mk_star(flr(rnd(128)), 0))
+            end
+        end
     end
 )
 
 -- ===== draw systems =====
 
-draw_ship = system({},
+draw_ships = system({},
     function(e)
         spr(e.sprite, e.position.x - 4, e.position.y - 4)
+    end
+)
+
+draw_starfield = system({},
+    function(e)
+        local color = 6
+        if e.direction.dy < 1 then
+            color = 1
+        elseif e.direction.dy < 1.5 then
+            color = 13
+        end
+        pset(e.position.x, e.position.y, color)
     end
 )
 
