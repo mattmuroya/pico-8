@@ -8,9 +8,7 @@ __lua__
 
 function _init()
     starfield = {}
-    for i = 1, 100 do
-        add(starfield, mk_star(flr(rnd(128)), flr(rnd(128))))
-    end
+    for i = 1, 100 do add(starfield, mk_star()) end
 
     ships = {}
     add(ships, mk_ship(64,64))
@@ -76,12 +74,12 @@ function mk_ship(x, y)
     }
 end
 
-function mk_star(x, y)
+function mk_star()
     return {
         type = "star",
         position = {
-            x = x,
-            y = y
+            x = flr(rnd(128)),
+            y = flr(rnd(128))
         },
         direction = {
             dx = 0,
@@ -148,9 +146,8 @@ move_entities = system({"direction"},
 
         if e.type == "star" then
             if e.position.y >= 128 then
-                -- e.position.y = 0
-                del(starfield, e)
-                add(starfield, mk_star(flr(rnd(128)), 0))
+                e.position.y = 0
+                e.position.x = flr(rnd(128))
             end
         end
     end
