@@ -31,24 +31,15 @@ end
 -- ecs framework/utils
 
 -- creates a function that takes a list of entities and performs the provided
--- action on each one that contains the specified components.
-function system(components, action)
+-- action on each.
+function system(action)
     return function(entities)
-        for entity in all(entities) do
-            if _has(entity, components) then
+        if type(entities) == "table" then
+            for entity in all(entities) do
                 action(entity)
             end
         end
     end
-end
-
-function _has(entity, components)
-    for component in all(components) do
-        if not entity[component] then
-            return false
-        end
-    end
-    return true
 end
 
 function log(input)
@@ -93,7 +84,7 @@ end
 
 -- ===== update systems =====
 
-reset_ship = system({},
+reset_ship = system(
     function(e)
         e.direction.dx = 0
         e.direction.dy = 0
@@ -101,7 +92,7 @@ reset_ship = system({},
     end
 )
 
-get_player_input = system({},
+get_player_input = system(
     function(e)
         if btn(0) and btn(1) then
             if btn_0_was_last then e.direction.dx += e.speed
@@ -132,7 +123,7 @@ get_player_input = system({},
 )
 
 -- moves all entities that have position and speed components
-move_entities = system({"direction"},
+move_entities = system(
     function(e)
         e.position.x += e.direction.dx
         e.position.y += e.direction.dy
@@ -155,13 +146,13 @@ move_entities = system({"direction"},
 
 -- ===== draw systems =====
 
-draw_ships = system({},
+draw_ships = system(
     function(e)
         spr(e.sprite, e.position.x - 4, e.position.y - 4)
     end
 )
 
-draw_starfield = system({},
+draw_starfield = system(
     function(e)
         local color = 6
         if e.direction.dy < 1 then
